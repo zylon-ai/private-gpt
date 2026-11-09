@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import AsyncGenerator
 
 from injector import inject, singleton
@@ -84,8 +85,12 @@ class ChatAsyncFacadeService:
                     raise asyncio.CancelledError("HTTP request was disconnected")
 
             await check_disconnection()
+            # Checking per event cost ~7% of API CPU; once a second is enough.
+            next_check = time.monotonic() + 1.0
             async for event in event_generator:
-                await check_disconnection()
+                if time.monotonic() >= next_check:
+                    await check_disconnection()
+                    next_check = time.monotonic() + 1.0
                 yield event
 
         except asyncio.CancelledError:

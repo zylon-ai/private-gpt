@@ -44,11 +44,18 @@ class EnsureToolAreFlattenInterceptor(ChatRequestLoopInterceptor):
                     for tool_call_data in tool_calls:
                         if isinstance(tool_call_data, ToolSelection):
                             assistant_msg = message.model_copy(deep=True)
-                            if found_assistant:
-                                assistant_msg.additional_kwargs = {}
                             assistant_msg.additional_kwargs = {
                                 "tool_calls": [tool_call_data],
                             }
+                            # The reasoning behind the calls stays with the
+                            # first one (prompt styles with interleaved
+                            # reasoning send it back to the model).
+                            if not found_assistant and message.additional_kwargs.get(
+                                "thinking"
+                            ):
+                                assistant_msg.additional_kwargs["thinking"] = (
+                                    message.additional_kwargs["thinking"]
+                                )
                             if "tldr" in message.additional_kwargs:
                                 assistant_msg.additional_kwargs["tldr"] = (
                                     message.additional_kwargs["tldr"]

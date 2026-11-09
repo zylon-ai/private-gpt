@@ -20,7 +20,9 @@ async def test_repack_runs_off_the_event_loop_thread() -> None:
     prompt_helper = MagicMock()
     prompt_helper.repack.side_effect = repack
     llm = MagicMock()
-    llm.apredict = AsyncMock(return_value="summary")
+    # the synthesizer calls achat/acomplete directly (so llm_kwargs reach the LLM)
+    llm.metadata.is_chat_model = False
+    llm.acomplete = AsyncMock(return_value=MagicMock(text="summary"))
 
     synthesizer = TreeSummarizeSynthesizer(
         llm=llm, prompt_helper=prompt_helper, use_async=True

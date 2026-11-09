@@ -219,6 +219,24 @@ async def test_min_duration_suppression_leaves_nothing_open() -> None:
 
 
 @pytest.mark.asyncio
+async def test_min_duration_does_not_delay_a_finished_producer() -> None:
+    """A producer that finishes early ends the wait; min_duration is not a sleep."""
+
+    async def fast_generator() -> AsyncIterator[CondenseResponse]:
+        yield CondenseResponse(
+            is_condensed=False, chat_history=_HISTORY, condense_blocks=[]
+        )
+
+    loop = asyncio.get_running_loop()
+    start = loop.time()
+    emitted, error = await _run_producer(fast_generator(), min_duration=5)
+
+    assert error is None
+    assert emitted == []
+    assert loop.time() - start < 1
+
+
+@pytest.mark.asyncio
 async def test_suppressed_block_is_not_stopped_on_cancellation() -> None:
     """A block the client never saw must not receive a stop event.
 
@@ -234,6 +252,9 @@ async def test_suppressed_block_is_not_stopped_on_cancellation() -> None:
             chat_history=_HISTORY,
             condense_blocks=[_tldr_block("left")],
         )
+        # Still running when the cancellation lands, so the consumer is still
+        # buffering within min_duration.
+        await asyncio.sleep(10)
 
     queue: asyncio.Queue[Event | object | None] = asyncio.Queue()
     emitted: list[Event] = []

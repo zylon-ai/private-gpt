@@ -47,7 +47,7 @@ Anything that extends PrivateGPT in a way that doesn't fit the upstream roadmap.
 - **Auth providers:** OAuth, LDAP, SSO, or API key management layers.
 - **Multi-tenancy:** isolated namespaces, per-user vector stores, or team-based access control.
 - **Kubernetes Helm charts:** production-ready deployment configurations.
-- **Observability backends:** exporters for Grafana, Datadog, or other monitoring stacks beyond the built-in Phoenix support.
+- **Observability backends:** trace exporters (OTLP, Phoenix, Langfuse, Grafana, Datadog...) registered with `register_exporter`, beyond the built-in JSONL file.
 
 ### UI and developer experience
 

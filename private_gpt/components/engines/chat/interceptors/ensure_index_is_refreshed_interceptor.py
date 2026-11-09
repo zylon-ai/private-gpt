@@ -15,6 +15,18 @@ from private_gpt.events.models import (
 )
 
 
+def _with_index(
+    event: RawContentBlockStartEvent
+    | RawContentBlockDeltaEvent
+    | RawContentBlockStopEvent,
+    index: int,
+) -> Event:
+    # Most events already carry the right index; skip the per-event copy then.
+    if event.index == index:
+        return event
+    return event.model_copy(update={"index": index})
+
+
 class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
     _current_index: int = 0
     _block_id_map: dict[str, int] | None = None
@@ -37,7 +49,7 @@ class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
                 self._block_id_map[block_id] = self._current_index
                 self._current_index += 1
                 context.state.runtime.next_block_count = self._current_index
-                return event.model_copy(update={"index": self._block_id_map[block_id]})
+                return _with_index(event, self._block_id_map[block_id])
 
             case (
                 RawContentBlockDeltaEvent(block_id=block_id)
@@ -47,7 +59,7 @@ class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
                     raise ValueError(
                         f"Received {type(event).__name__} for unknown blockId {block_id}"
                     )
-                return event.model_copy(update={"index": self._block_id_map[block_id]})
+                return _with_index(event, self._block_id_map[block_id])
 
             case _:
                 return event

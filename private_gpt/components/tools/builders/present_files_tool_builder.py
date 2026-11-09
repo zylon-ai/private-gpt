@@ -100,6 +100,9 @@ class PresentFilesToolBuilder:
                     presented_path = _outputs_file_path_or_error(filepath)
                     if not await session.path_exists(presented_path):
                         raise FileNotFoundError(f"File not found: {presented_path}")
+                    # The download goes through the files API, which matches the
+                    # name byte-for-byte: hand it the Unicode form on disk.
+                    presented_path = await session.locate(presented_path)
                     mime_type, _ = mimetypes.guess_type(presented_path)
                     if mime_type is None:
                         suffix = Path(presented_path).suffix.lower()

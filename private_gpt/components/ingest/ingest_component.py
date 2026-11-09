@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -32,6 +31,7 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
+from private_gpt.utils.async_utils import run_sync
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -269,7 +269,7 @@ class IngestComponent:
             # 2. Insert nodes
             inserted_nodes: Sequence[BaseNode] = []
             if use_async:
-                inserted_nodes = asyncio.run(
+                inserted_nodes = run_sync(
                     extended_index.ainsert(nodes, notify=notify_publisher)
                 )
             else:

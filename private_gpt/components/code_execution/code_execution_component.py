@@ -7,6 +7,7 @@ from injector import inject, singleton
 
 from private_gpt.components.code_execution.registry import CodeExecutionProviderRegistry
 from private_gpt.components.container_registry import ContainerRegistry
+from private_gpt.observability.tracing import SpanKind, start_span
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -43,7 +44,17 @@ class CodeExecutionComponent:
             return None
 
         async with self._lock:
-            session = await provider.create_session(config)
+            with start_span(
+                "sandbox.session",
+                SpanKind.TOOL,
+                attributes={
+                    "pgpt.sandbox.provider": self._settings.code_execution.provider,
+                    "pgpt.sandbox.session_id": config.session_id,
+                    "pgpt.sandbox.mounts": len(config.mounts),
+                    "pgpt.sandbox.reused": config.session_id in self._sessions,
+                },
+            ):
+                session = await provider.create_session(config)
             self._sessions[config.session_id] = session
             self._container_registry.register(
                 config.session_id, self._settings.code_execution.session_ttl_seconds

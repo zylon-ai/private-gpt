@@ -60,6 +60,14 @@ class CodeExecutionSession(ABC):
     async def path_exists(self, path: str) -> bool:
         """Return True if the path exists in the session workspace."""
 
+    async def locate(self, path: str) -> str:
+        """Return *path* spelled the way the file is actually named on disk.
+
+        Sessions that can tell accented names apart by Unicode form override
+        this; the default trusts the path as given.
+        """
+        return path
+
     @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""

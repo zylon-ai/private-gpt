@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import posixpath
+import re
 import shlex
 from typing import TYPE_CHECKING
 
@@ -10,6 +12,8 @@ from private_gpt.components.code_execution.results import (
     FileOperationResult,
 )
 from private_gpt.components.sandbox.base import SandboxExecOptions
+from private_gpt.observability.tracing import SpanKind, set_span_status, traced
+from private_gpt.utils.unicode import unicode_forms
 
 if TYPE_CHECKING:
     from private_gpt.components.environment.environment import Environment
@@ -64,6 +68,47 @@ _PLAIN_OUTPUT_PREFIX = "export " + " ".join(
 )
 
 
+# Shell words of a command: a quoted string or a run of non-separator characters.
+_SHELL_WORD = re.compile(r""""([^"\n]*)"|'([^'\n]*)'|([^\s'"`;|&<>()]+)""")
+# ``NAME=value`` / ``--flag=value``: only the value can be a path.
+_ASSIGNMENT_PREFIX = re.compile(r"^-{0,2}[A-Za-z_][\w-]*=")
+_FILE_SUFFIX = re.compile(r"\.\w{1,8}$")
+# Bound on the words probed per command, so a long script does not turn into
+# hundreds of filesystem round trips.
+_MAX_PATH_PROBES = 16
+
+
+def _path_candidates(command: str, offset: int = 0) -> list[tuple[int, int, str]]:
+    """Return ``(start, end, word)`` for each word that may name an accented file.
+
+    Only words that change under Unicode normalization can be misspelled this
+    way, and only path-looking ones (a ``/`` or a file extension) are kept.
+    Quoted strings are also searched inside, since code passed inline
+    (``python -c 'open("…")'``) nests its own quotes; an outer word always
+    comes before the words inside it.
+    """
+    candidates: list[tuple[int, int, str]] = []
+    for match in _SHELL_WORD.finditer(command):
+        group = next(g for g in (1, 2, 3) if match.group(g) is not None)
+        start, end, word = match.start(group), match.end(group), match.group(group)
+        if group == 3 and (prefix := _ASSIGNMENT_PREFIX.match(word)):
+            start, word = start + prefix.end(), word[prefix.end() :]
+        if len(unicode_forms(word)) == 1:
+            continue
+        if "/" in word or _FILE_SUFFIX.search(word):
+            candidates.append((offset + start, offset + end, word))
+        if group != 3:
+            candidates.extend(_path_candidates(word, offset + start))
+    return candidates
+
+
+def _file_result(result: FileOperationResult) -> dict[str, object]:
+    """Span output for a file operation; failures are marked on the span."""
+    if not result.success:
+        set_span_status(error=result.error or "File operation failed")
+    return result.model_dump(exclude_none=True)
+
+
 class SandboxCodeExecutionSession(CodeExecutionSession):
     """CodeExecutionSession tool protocol over a managed Environment.
 
@@ -85,6 +130,77 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return path
         return posixpath.join(self._env.workspace, path)
 
+    async def _find(self, path: str) -> str | None:
+        """Return the Unicode form of absolute *path* that exists, if any.
+
+        An accented name can be stored pre-composed ("é") or decomposed ("e" +
+        U+0301). Both render the same, so a model copying the name from search
+        results or a file listing may produce the other form, which the
+        sandbox filesystem treats as a different, missing file.
+        """
+        for form in unicode_forms(path):
+            if await self._sandbox.path_exists(form):
+                return form
+        return None
+
+    async def locate(self, path: str) -> str:
+        path = self._resolve_path(path)
+        if len(unicode_forms(path)) == 1:
+            return path
+        return await self._find(path) or path
+
+    async def _locate_paths(self, command: str) -> str:
+        """Respell accented file paths in *command* the way they exist on disk.
+
+        A word is only replaced when it names no file as given but another
+        Unicode form of it does, so commands that already work are untouched.
+        """
+        candidates = _path_candidates(command)[:_MAX_PATH_PROBES]
+        if not candidates:
+            return command
+
+        async def respelled(word: str) -> str:
+            try:
+                if await self._sandbox.path_exists(self._resolve_path(word)):
+                    return word
+                for form in unicode_forms(word)[1:]:
+                    if await self._sandbox.path_exists(self._resolve_path(form)):
+                        return form
+            except Exception:
+                # Not a path inside the sandbox mounts; leave it as written.
+                pass
+            return word
+
+        replacements = await asyncio.gather(
+            *(respelled(word) for _, _, word in candidates)
+        )
+        # Keep the outermost respelled word of each nested group.
+        chosen: list[tuple[int, int, str]] = []
+        for (start, end, word), replacement in zip(
+            candidates, replacements, strict=True
+        ):
+            if replacement == word:
+                continue
+            if any(
+                start < kept_end and kept_start < end
+                for kept_start, kept_end, _ in chosen
+            ):
+                continue
+            chosen.append((start, end, replacement))
+        for start, end, replacement in sorted(chosen, reverse=True):
+            command = command[:start] + replacement + command[end:]
+        return command
+
+    @traced(
+        "sandbox.exec",
+        SpanKind.TOOL,
+        capture=lambda _self, command, timeout=None, restart=False: {
+            "command": command,
+            "timeout": timeout,
+            "restart": restart,
+        },
+        result=lambda r: r.model_dump(exclude={"success"}),
+    )
     async def execute_bash(
         self, command: str, timeout: int | None = None, restart: bool = False
     ) -> BashExecutionResult:
@@ -94,6 +210,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             # can resolve (cwd="/" is outside the local translator's mounts).
             await self._env.exec(f"rm -rf {workspace}* {workspace}.[!.]*")
             await self._sandbox.make_dir(workspace)
+        command = await self._locate_paths(command)
         result = await self._env.exec(
             f"{_PLAIN_OUTPUT_PREFIX}\n{command}",
             SandboxExecOptions(timeout=timeout, cwd=workspace),
@@ -106,15 +223,24 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             execution_time_ms=result.execution_time_ms,
         )
 
+    @traced(
+        "sandbox.view",
+        SpanKind.TOOL,
+        capture=lambda _self, path, view_range=None, **_: {
+            "path": path,
+            "view_range": view_range,
+        },
+        result=_file_result,
+    )
     async def view(
         self,
         path: str,
         view_range: tuple[int, int] | None = None,
         include_line_numbers: bool = True,
     ) -> FileOperationResult:
-        path = self._resolve_path(path)
         self._env.touch()
         try:
+            path = await self.locate(path)
             if not await self._sandbox.path_exists(path):
                 return FileOperationResult(
                     success=False, error=f"File not found: {path}"
@@ -151,6 +277,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.str_replace",
+        SpanKind.TOOL,
+        capture=lambda _self, path, old_str, new_str: {
+            "path": path,
+            "old_str": old_str,
+            "new_str": new_str,
+        },
+        result=_file_result,
+    )
     async def str_replace(
         self, path: str, old_str: str, new_str: str
     ) -> FileOperationResult:
@@ -162,9 +298,9 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(
                 success=False, error="str_replace requires the new_str parameter."
             )
-        path = self._resolve_path(path)
         self._env.touch()
         try:
+            path = await self.locate(path)
             raw = await self._sandbox.read_file(path)
             text = raw.decode("utf-8", errors="replace")
             occurrences = text.count(old_str)
@@ -186,14 +322,25 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.create",
+        SpanKind.TOOL,
+        capture=lambda _self, path, file_text: {
+            "path": path,
+            "bytes": len(file_text or ""),
+        },
+        result=_file_result,
+    )
     async def create(self, path: str, file_text: str) -> FileOperationResult:
         if not isinstance(file_text, str):
             return FileOperationResult(
                 success=False, error="create requires the file_text parameter."
             )
-        path = self._resolve_path(path)
         self._env.touch()
         try:
+            # Overwrite an existing file named in another Unicode form rather
+            # than leaving two visually identical files side by side.
+            path = await self.locate(path)
             is_update = await self._sandbox.path_exists(path)
             await self._sandbox.write_file(path, file_text.encode("utf-8"))
             return FileOperationResult(
@@ -204,6 +351,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.insert",
+        SpanKind.TOOL,
+        capture=lambda _self, path, insert_line, new_str: {
+            "path": path,
+            "insert_line": insert_line,
+            "new_str": new_str,
+        },
+        result=_file_result,
+    )
     async def insert(
         self, path: str, insert_line: int, new_str: str
     ) -> FileOperationResult:
@@ -211,9 +368,9 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(
                 success=False, error="insert requires the new_str parameter."
             )
-        path = self._resolve_path(path)
         self._env.touch()
         try:
+            path = await self.locate(path)
             raw = await self._sandbox.read_file(path)
             text = raw.decode("utf-8", errors="replace")
             lines = text.splitlines()
@@ -235,20 +392,32 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def get_endpoint(self, port: int) -> SandboxLink | None:
         return await self._sandbox.get_endpoint(port)
 
+    @traced(
+        "sandbox.read_file",
+        SpanKind.TOOL,
+        capture=lambda _self, path: {"path": path},
+        result=lambda raw: {"bytes": len(raw)},
+    )
     async def read_file(self, path: str) -> bytes:
-        path = self._resolve_path(path)
         self._env.touch()
-        return await self._sandbox.read_file(path)
+        return await self._sandbox.read_file(await self.locate(path))
 
+    @traced(
+        "sandbox.write_file",
+        SpanKind.TOOL,
+        capture=lambda _self, path, content: {"path": path, "bytes": len(content)},
+        result=lambda _: None,
+    )
     async def write_file(self, path: str, content: bytes) -> None:
-        path = self._resolve_path(path)
         self._env.touch()
-        await self._sandbox.write_file(path, content)
+        await self._sandbox.write_file(await self.locate(path), content)
 
     async def path_exists(self, path: str) -> bool:
         path = self._resolve_path(path)
         self._env.touch()
-        return await self._sandbox.path_exists(path)
+        if len(unicode_forms(path)) == 1:
+            return await self._sandbox.path_exists(path)
+        return await self._find(path) is not None
 
     async def close(self) -> None:
         await self._sandbox.close()

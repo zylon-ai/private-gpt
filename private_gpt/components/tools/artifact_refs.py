@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError, WithJsonSchema
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.ingest.metadata_helper import MetadataKeys
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.utils.unicode import nfc, unicode_forms
 
 # Upper bound of nodes scanned when looking up the artifacts behind a file name.
 _NAME_LOOKUP_LIMIT = 500
@@ -52,7 +53,9 @@ SHAPE_ERROR = (
 
 
 def _normalize(name: str) -> str:
-    return name.strip().casefold()
+    # NFC first: the same accented file name can arrive pre-composed ("é")
+    # or decomposed ("e" + U+0301), which are visually identical but not equal.
+    return nfc(name).strip().casefold()
 
 
 def _basename(name: str) -> str:
@@ -117,8 +120,12 @@ async def _ids_by_name(
 ) -> dict[str, str]:
     """Artifacts (artifact_id -> file name) whose file name matches `name`."""
     # Metadata filters are exact matches: try the name as given and its basename.
-    stripped = name.strip()
-    candidates = {stripped, posixpath.basename(stripped.replace("\\", "/"))}
+    # The store matches metadata byte-for-byte, so also try both Unicode forms
+    # of the name; accented names may be stored pre-composed or decomposed.
+    candidates: set[str] = set()
+    for variant in unicode_forms(name.strip()):
+        candidates.add(variant)
+        candidates.add(posixpath.basename(variant.replace("\\", "/")))
 
     def lookup(file_name: str) -> list[BaseNode]:
         return node_store_component.filtered_nodes(

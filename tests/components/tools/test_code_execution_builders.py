@@ -277,7 +277,10 @@ async def test_present_files_builder_presents_existing_output_files() -> None:
     async def path_exists(path: str) -> bool:
         return path in existing
 
-    session = SimpleNamespace(path_exists=AsyncMock(side_effect=path_exists))
+    session = SimpleNamespace(
+        path_exists=AsyncMock(side_effect=path_exists),
+        locate=AsyncMock(side_effect=lambda path: path),
+    )
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)
@@ -348,7 +351,10 @@ async def test_present_files_rejects_non_output_paths(filepath: str) -> None:
 
 @pytest.mark.asyncio
 async def test_present_files_mixed_list_presents_outputs_and_rejects_others() -> None:
-    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
+    session = SimpleNamespace(
+        path_exists=AsyncMock(return_value=True),
+        locate=AsyncMock(side_effect=lambda path: path),
+    )
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)

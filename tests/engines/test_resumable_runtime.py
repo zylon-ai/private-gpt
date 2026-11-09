@@ -164,18 +164,21 @@ async def test_memory_event_broker_preserves_publish_order_and_finishes() -> Non
 @pytest.mark.asyncio
 async def test_broker_event_channel_flush_publishes_without_closing() -> None:
     broker = MagicMock()
-    broker.publish = AsyncMock()
+    broker.publish_many = AsyncMock()
     channel = BrokerEventChannel(broker, "execution-1")
     first = PingEvent()
     second = PingEvent()
+    third = PingEvent()
 
     channel.emit(first)
     await channel.flush()
-    broker.publish.assert_awaited_once_with("execution-1", first)
+    broker.publish_many.assert_awaited_once_with("execution-1", [first])
 
     channel.emit(second)
+    channel.emit(third)
     await channel.close()
-    assert broker.publish.await_count == 2
+    broker.publish_many.assert_awaited_with("execution-1", [second, third])
+    assert broker.publish_many.await_count == 2
 
 
 @pytest.mark.asyncio

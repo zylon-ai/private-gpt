@@ -30,6 +30,11 @@ from private_gpt.events.models import (
     TLDRBlock,
     TLDRDelta,
 )
+from private_gpt.observability.tracing import (
+    SpanKind,
+    set_span_attributes,
+    start_span,
+)
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -143,6 +148,33 @@ async def _condensation_producer(
     return result
 
 
+async def _traced_producer(
+    queue: asyncio.Queue[Event | object | None],
+    result: _CondensationResult,
+    generator: AsyncIterator[CondenseResponse],
+    messages: int,
+) -> _CondensationResult:
+    """Run the producer inside a ``chat.condensation`` span.
+
+    The span records whether condensation was needed (token counts against
+    the limit) and, when it ran, the strategy and the history before and
+    after; the strategy's LLM calls nest under it.
+    """
+    with start_span(
+        "chat.condensation", SpanKind.CHAIN, input={"messages": messages}
+    ) as span:
+        outcome = await _condensation_producer(queue, result, generator)
+        set_span_attributes(
+            span,
+            output={
+                "condensed": outcome.condensed,
+                "messages": len(outcome.chat_history or []) or None,
+            },
+            **{"pgpt.condensation.condensed": outcome.condensed},
+        )
+        return outcome
+
+
 class _OpenBlockTracker:
     """Tracks the blocks the client has actually seen, so each closes exactly once.
 
@@ -207,9 +239,22 @@ async def _consume_and_emit_with_min_duration(
     tracker = tracker if tracker is not None else _OpenBlockTracker()
 
     if min_duration is not None:
-        await asyncio.sleep(min_duration)
-
+        # Buffer for up to min_duration, but stop as soon as the producer finishes:
+        # a fixed sleep here delayed every request (and every agent iteration) by
+        # min_duration even when no condensation was needed.
         buffered: list[Event | object | None] = []
+        deadline = asyncio.get_running_loop().time() + min_duration
+        while True:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                break
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=remaining)
+            except TimeoutError:
+                break
+            buffered.append(event)
+            if event is _SENTINEL:
+                break
         while not queue.empty():
             buffered.append(queue.get_nowait())
 
@@ -277,7 +322,9 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
 
         queue: asyncio.Queue[Event | object | None] = asyncio.Queue()
         result = _CondensationResult()
-        producer = asyncio.create_task(_condensation_producer(queue, result, generator))
+        producer = asyncio.create_task(
+            _traced_producer(queue, result, generator, len(history))
+        )
         tracker = _OpenBlockTracker()
 
         try:

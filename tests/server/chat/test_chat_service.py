@@ -284,3 +284,18 @@ async def test_validate_returns_original_message_for_any_interceptor_error(
 
     assert not result.valid
     assert result.errors == [str(error)]
+
+
+@pytest.mark.asyncio
+async def test_cancel_goes_straight_to_the_runner_without_building_an_engine(
+    injector: MockInjector,
+) -> None:
+    service: ChatService = injector.get(ChatService)
+    service.settings.chat.engine_mode = "async"
+    service.build_engine = MagicMock(side_effect=AssertionError("not needed"))
+    runner = MagicMock()
+    runner.cancel = AsyncMock(return_value=True)
+    service._runner = runner
+
+    assert await service.cancel("execution-1") is True
+    runner.cancel.assert_awaited_once_with("execution-1")

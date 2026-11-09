@@ -90,7 +90,17 @@ def snapshot() -> ContextBag:
     JSON-compatible as long as the bag's values are, which is the case for
     everything currently written (headers / cookies / ids).
     """
-    return {k: v for k, v in current_bag().items() if not _is_empty(v)}
+    bag = {k: v for k, v in current_bag().items() if not _is_empty(v)}
+    # Lazy import: tracing is optional and must not slow down this hot path.
+    from private_gpt.observability.tracing import (
+        TRACE_CONTEXT_KEY,
+        inject_trace_context,
+    )
+
+    trace_carrier = inject_trace_context()
+    if trace_carrier:
+        bag[TRACE_CONTEXT_KEY] = trace_carrier
+    return bag
 
 
 @contextmanager
@@ -101,9 +111,14 @@ def reinstall(bag: ContextBag | None = None) -> Iterator[None]:
     the worker's ambient context and concurrent jobs do not leak into each
     other.
     """
+    from private_gpt.observability.tracing import TRACE_CONTEXT_KEY, trace_context_from
+
+    restored = dict(bag) if bag is not None else ContextBag()
+    trace_carrier = restored.pop(TRACE_CONTEXT_KEY, None)
     previous = _bag.get()
-    _bag.set(dict(bag) if bag is not None else ContextBag())
+    _bag.set(restored)
     try:
-        yield
+        with trace_context_from(trace_carrier):
+            yield
     finally:
         _bag.set(previous)

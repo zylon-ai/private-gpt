@@ -1022,8 +1022,194 @@ class OpenAISettings(BaseModel):
     )
 
 
+class ObservabilityExporterSettings(BaseModel):
+    """One trace destination.
+
+    Built in: ``jsonl`` (OTLP JSON lines to a file, one export batch per line,
+    readable by the OpenTelemetry Collector file receiver) and ``console``.
+    Other types (OTLP backends, vendor presets) are added by
+    ``private_gpt.observability.exporters.register_exporter``; their own
+    fields go in ``options``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = Field(
+        default="jsonl",
+        description="Exporter type: `jsonl`, `console` or a registered one.",
+    )
+    enabled: bool = Field(default=True)
+    path: str = Field(
+        default="local_data/traces/traces.jsonl",
+        description="`jsonl`: file to append to; rotated by size.",
+    )
+    max_bytes: int = Field(
+        default=50 * 1024 * 1024,
+        description="`jsonl`: rotate when the file reaches this size.",
+    )
+    backup_count: int = Field(
+        default=5, description="`jsonl`: rotated files kept (`traces.jsonl.1`...)."
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        description=(
+            "Trace tags (see `observability.trace_tags`) this exporter receives; "
+            "`all` sends every span. Default: `all`, or what the exporter type "
+            "declares."
+        ),
+    )
+    options: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Settings of registered exporter types (endpoint, keys...).",
+    )
+
+
 class ObservabilitySettings(BaseModel):
-    mode: Literal["simple", "arize_phoenix", "opik", "none"]
+    mode: Literal["otel", "none"] = Field(
+        default="none",
+        description="`otel` sends OpenTelemetry traces to `exporters`.",
+    )
+    service_name: str | None = Field(
+        default=None,
+        description=(
+            "OTel service.name. Defaults to `<namespace>-<process role>` "
+            "(e.g. private-gpt-api, private-gpt-celery, private-gpt-arq)."
+        ),
+    )
+    service_namespace: str = Field(default="private-gpt")
+    environment: str | None = Field(
+        default=None, description="deployment.environment resource attribute."
+    )
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def _empty_environment_is_unset(cls, value: Any) -> Any:
+        # `${PGPT_OBSERVABILITY_ENVIRONMENT:}` loads as "" when unset.
+        return value or None
+
+    resource_attributes: dict[str, str] = Field(default_factory=dict)
+    semconv: Literal["openinference", "genai", "both"] = Field(
+        default="openinference",
+        description=(
+            "Attribute conventions on LLM spans: `openinference`, `genai` "
+            "(OTel gen_ai.*) or `both`, as the backend expects."
+        ),
+    )
+    capture_content: bool = Field(
+        default=True,
+        description=(
+            "Record prompts, completions, tool arguments/results and retrieved "
+            "text. Disable to export only metadata (PII-sensitive deployments)."
+        ),
+    )
+    sampling_ratio: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fraction of traces recorded (parent-based, so a trace is all or "
+            "nothing). Lower it under high traffic."
+        ),
+    )
+    max_llm_input_messages: int = Field(
+        default=20,
+        ge=1,
+        description=(
+            "Messages recorded per LLM span (system messages plus the most recent "
+            "ones). Earlier turns are on the session's previous traces; serializing "
+            "the whole history on every call costs milliseconds on the event loop."
+        ),
+    )
+    instrumentations: list[str] | Literal["lean", "full", "none"] = Field(
+        default="lean",
+        description=(
+            "Library instrumentations to enable. `lean`: fastapi, httpx, "
+            "threading, celery, logging, llama_index, mcp. `full` adds grpc, "
+            "sqlalchemy, redis. Or an explicit list of those names."
+        ),
+    )
+    drop_spans: list[str] = Field(
+        default_factory=lambda: [
+            "*.get_metadata",
+            "*._prepare_chat_with_tools",
+            # Duplicates our `tool <name>` span; tool internals are its siblings.
+            "FunctionTool.acall",
+        ],
+        description=(
+            "fnmatch patterns of span names dropped before export (noise from "
+            "llama-index auto-instrumentation). Children of a dropped span are "
+            "re-attached to its parent."
+        ),
+    )
+    excluded_urls: list[str] = Field(
+        default_factory=lambda: ["/health", "/metrics"],
+        description="HTTP routes never traced.",
+    )
+    trace_response_header: bool = Field(
+        default=True,
+        description="Return `X-Trace-Id` and W3C `traceresponse` on HTTP responses.",
+    )
+    capture_http_bodies: bool = Field(
+        default=True,
+        description=(
+            "Record request and response bodies (JSON or SSE) on the HTTP server "
+            "span as they stream; the client is never delayed. Ignored when "
+            "capture_content is false."
+        ),
+    )
+    capture_http_paths: list[str] = Field(
+        default_factory=lambda: [
+            "/v1/messages*",
+            "/v1/chat/*",
+            "/v1/completions*",
+            "/v1/complete",
+            "/v1/tools/*",
+            "/v1/primitives/*",
+            "/v1/artifacts/convert",
+            "/v1/artifacts/ingest",
+            "/v1/artifacts/ingest/async",
+            "/v1/artifacts/delete*",
+        ],
+        description="fnmatch patterns of request paths whose bodies are recorded.",
+    )
+    max_http_body_bytes: int = Field(
+        default=64_000,
+        description="Bytes kept per request/response body; the rest is counted only.",
+    )
+    trace_tags: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            # Model work worth debugging: the agent turn and everything under
+            # it, standalone tool/search/completion calls, and the worker side
+            # of a turn (ARQ chat jobs open `chat.turn*`; Celery tool runs do
+            # not, so they are matched by task name).
+            "ai": [
+                "POST /v1/messages",
+                "POST /v1/messages/async",
+                "POST /v1/complete",
+                "POST /v1/tools/*",
+                "POST /v1/primitives/search",
+                "POST /v1/embeddings",
+                "POST /v1/messages/count_tokens",
+                "chat.turn*",
+                "run/private_gpt.tools.*",
+            ],
+            # Document ingestion (sync API, async API and the Celery parse /
+            # store-vectors tasks): parsing, image description, embeddings.
+            "ingestion": [
+                "POST /v1/artifacts/ingest*",
+                "POST /v1/artifacts/delete*",
+                "POST /v1/artifacts/convert",
+                "run/private_gpt.ingestion.*",
+            ],
+        },
+        description=(
+            "Tag -> span-name patterns (fnmatch, or `kind:<OPENINFERENCE_KIND>`). "
+            "A matching span tags its whole trace; exporters choose which tags "
+            "they receive with `exporters[].tags`. Status polling, listings, "
+            "health and admin routes match nothing, so LLM backends skip them."
+        ),
+    )
+    exporters: list[ObservabilityExporterSettings] = Field(default_factory=list)
 
 
 class QdrantSettings(BaseModel):
@@ -1552,20 +1738,6 @@ class S3Settings(BaseModel):
         default=120.0,
         gt=0,
         description="Seconds to wait for data on an open S3 connection.",
-    )
-
-
-class ArizePhoenixSettings(BaseModel):
-    url: str = Field(description="Arize Phoenix host")
-
-
-class OpikSettings(BaseModel):
-    workspace: str = Field(description="Opik workspace")
-    project_name: str = Field(description="Opik project name")
-    host: str | None = Field(description="Opik host", default="http://localhost:5173/")
-    api_key: str | None = Field(description="Opik API key", repr=False)
-    task_threads: int = Field(
-        default=4, description="Number of threads to use for Opik tasks."
     )
 
 
@@ -2308,8 +2480,6 @@ class Settings(BaseModel):
     cache: CacheSettings = Field(default_factory=CacheSettings)
     tasks_results_broker: TasksResultsBroker
     s3: S3Settings
-    phoenix: ArizePhoenixSettings
-    opik: OpikSettings
     principal: PrincipalSettings
     sandbox: SandboxSettings
     bash: BashSettings

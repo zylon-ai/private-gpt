@@ -62,6 +62,16 @@ def _keep_result_seconds(current_settings: Settings) -> int:
     return int(os.environ.get("PGPT_ARQ_KEEP_RESULT", str(default)))
 
 
+def _poll_delay() -> float:
+    """Seconds between queue polls.
+
+    arq 0.26 has no blocking pickup, so a job waits on average half of this before
+    it starts; arq's 0.5 s default added ~0.25 s to every chat request. Each poll
+    is one ZRANGEBYSCORE plus the abort-set pipeline.
+    """
+    return float(os.environ.get("PGPT_ARQ_POLL_DELAY", "0.05"))
+
+
 def run_arq_worker(
     *,
     settings_resolver: Callable[[], Settings] = settings,
@@ -75,6 +85,7 @@ def run_arq_worker(
     max_jobs = int(os.environ.get("PGPT_ARQ_MAX_JOBS", str(_default_concurrency())))
     job_timeout = int(os.environ.get("PGPT_ARQ_JOB_TIMEOUT", "21600"))
     keep_result = _keep_result_seconds(current_settings)
+    poll_delay = _poll_delay()
     health_check_interval = arq_health_check_interval()
     api_enabled = os.environ.get("API_ENABLED", "true").lower() == "true"
     api_port = os.environ.get("API_PORT", "8091")
@@ -136,6 +147,7 @@ def run_arq_worker(
             health_check_interval=health_check_interval,
             health_check_key=arq_health_check_key(queue_name),
             job_completion_wait=5,
+            poll_delay=poll_delay,
         )
         loop = asyncio.get_running_loop()
         stop_event = asyncio.Event()
@@ -156,6 +168,7 @@ def run_arq_worker(
     print(
         f"Starting arq worker queue={queue_name} task_packages={','.join(task_packages)} "
         f"max_jobs={max_jobs} job_timeout={job_timeout} keep_result={keep_result} "
+        f"poll_delay={poll_delay} "
         f"health_check_interval={health_check_interval}"
     )
     try:

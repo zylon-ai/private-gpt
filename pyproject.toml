@@ -19,7 +19,6 @@ dependencies = [
     "partial-json-parser>=0.2.1.1.post7,<0.3",
     "requests>=2.33.0,<3",
     "retry-async>=0.1.4,<0.2",
-    "nest-asyncio>=1.6.0",
     "nltk>=3.10.0,<4",
     "arq>=0.26,<0.27",
 ]
@@ -278,17 +277,28 @@ media = [
 # ---------------------------------------------------------------------------
 # Observability
 # ---------------------------------------------------------------------------
-observability-arize-phoenix = [
-    "openinference-instrumentation-llama-index>=4.3.9,<5",
-    "opentelemetry-proto>=1.41.0,<2",
-    "opentelemetry-exporter-otlp>=1.41.0,<2",
-    "opentelemetry-sdk>=1.41.0,<2",
-]
-observability-opik = [
-    "opik>=2.0.21,<3",
+observability-otel = [
+    "opentelemetry-api>=1.45.0,<2",
+    "opentelemetry-sdk>=1.45.0,<2",
+    "opentelemetry-exporter-otlp-proto-common>=1.45.0,<2",
+    "opentelemetry-instrumentation-fastapi>=0.66b1",
+    "opentelemetry-instrumentation-httpx>=0.66b1",
+    "opentelemetry-instrumentation-threading>=0.66b1",
+    "opentelemetry-instrumentation-celery>=0.66b1",
+    "opentelemetry-instrumentation-logging>=0.66b1",
+    "opentelemetry-instrumentation-grpc>=0.66b1",
+    "opentelemetry-instrumentation-sqlalchemy>=0.66b1",
+    "opentelemetry-instrumentation-redis>=0.66b1",
+    "openinference-semantic-conventions>=0.1.41",
+    "openinference-instrumentation>=0.1.71",
+    "openinference-instrumentation-llama-index>=4.6.0,<5",
+    # openinference-instrumentation-llama-index 4.6 imports SpanCancelledEvent,
+    # added in llama-index-workflows 2.16 (it does not declare the floor itself).
+    # Pinned: on 2.26 the audio workflow times out before its first LLM call.
+    "llama-index-workflows==2.16.0",
 ]
 observability = [
-    "private-gpt[observability-arize-phoenix,observability-opik]",
+    "private-gpt[observability-otel]",
 ]
 
 # ---------------------------------------------------------------------------

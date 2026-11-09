@@ -374,3 +374,61 @@ async def test_accepts_valid_request() -> None:
     )
 
     await _run_interceptor(interceptor, request)
+
+
+class CountingTokenizer(DummyTokenizer):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __call__(
+        self,
+        texts: str | None = None,
+        images: object | None = None,
+        audios: object | None = None,
+        **kwargs: object,
+    ) -> TokenizedInput:
+        self.calls += 1
+        return super().__call__(texts, images, audios, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_skips_tokenizer_when_text_bytes_fit_the_limit() -> None:
+    # The tokenizer can be a remote call; a request whose byte count already
+    # fits the limit cannot exceed it in tokens.
+    tokenizer = CountingTokenizer()
+    interceptor = _build_interceptor(
+        metadata=LLMMetadata(
+            is_function_calling_model=True,
+            context_window=4096,
+            num_output=256,
+        ),
+        config=_build_model_config(),
+        tokenizer=tokenizer,
+    )
+    request = _request_with_user_blocks(
+        [TextBlock(text="hello there")], system_prompt="system prompt"
+    )
+
+    await _run_interceptor(interceptor, request)
+
+    assert tokenizer.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_tokenizes_when_text_bytes_exceed_the_limit() -> None:
+    tokenizer = CountingTokenizer()
+    interceptor = _build_interceptor(
+        metadata=LLMMetadata(
+            is_function_calling_model=True,
+            context_window=320,
+            num_output=10,
+        ),
+        config=_build_model_config(),
+        tokenizer=tokenizer,
+    )
+    # 54 tokens limit; ~200 bytes of text but only 2 words: tokenized, accepted.
+    request = _request_with_user_blocks([TextBlock(text="a" * 100 + " " + "b" * 100)])
+
+    await _run_interceptor(interceptor, request)
+
+    assert tokenizer.calls >= 1

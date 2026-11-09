@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -32,10 +31,34 @@ from private_gpt.components.readers.pdf_inspector.pdf_inspector_reader import (
     PdfInspectorFallbackError,
 )
 from private_gpt.components.readers.reader_component import ReaderComponent
+from private_gpt.observability.tracing import (
+    SpanKind,
+    record_exception,
+    set_span_attributes,
+    set_span_status,
+    start_span,
+)
 from private_gpt.settings.settings import Settings
+from private_gpt.utils.async_utils import run_sync
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def _nodes_summary(nodes: list[BaseNode]) -> dict[str, Any]:
+    """Node count, size and a preview of the extracted text for tracing."""
+    text = "\n\n".join(
+        content
+        for node in nodes[:20]
+        if (content := node.get_content(metadata_mode=MetadataMode.NONE))
+    )
+    return {
+        "nodes": len(nodes),
+        "chars": sum(
+            len(node.get_content(metadata_mode=MetadataMode.NONE)) for node in nodes
+        ),
+        "preview": text[:4_000],
+    }
 
 
 class FileParseResult(BaseModel):
@@ -130,27 +153,41 @@ class ParseComponent:
         reader = preferred_reader or self._resolve_reader(extension)
 
         while reader is not None:
-            try:
-                nodes = self._load_data(
-                    file_obj,
-                    file_metadata,
-                    notification=notification,
-                    warnings=warnings,
-                    reader_name=reader,
-                    execute_transformations=execute_transformations,
-                )
-                if nodes:
-                    return nodes, reader
-            except (
-                PdfInspectorFallbackError,
-                ExtractionUnsuccessfulError,
-                RuntimeError,
-            ) as e:
-                logger.warning("Reader %s failed for %s: %s", reader, extension, e)
-            except Exception as e:
-                logger.error(
-                    "Unexpected error with reader %s: %s", reader, e, exc_info=True
-                )
+            with start_span(
+                f"reader.{reader}",
+                SpanKind.CHAIN,
+                input={
+                    "file_name": getattr(file_obj, "file_name", None),
+                    "extension": extension,
+                    "execute_transformations": execute_transformations,
+                },
+            ) as span:
+                try:
+                    nodes = self._load_data(
+                        file_obj,
+                        file_metadata,
+                        notification=notification,
+                        warnings=warnings,
+                        reader_name=reader,
+                        execute_transformations=execute_transformations,
+                    )
+                    if span.is_recording():
+                        set_span_attributes(span, output=_nodes_summary(nodes))
+                    if nodes:
+                        return nodes, reader
+                    set_span_status(span, error="No nodes extracted")
+                except (
+                    PdfInspectorFallbackError,
+                    ExtractionUnsuccessfulError,
+                    RuntimeError,
+                ) as e:
+                    logger.warning("Reader %s failed for %s: %s", reader, extension, e)
+                    record_exception(e, span)
+                except Exception as e:
+                    logger.error(
+                        "Unexpected error with reader %s: %s", reader, e, exc_info=True
+                    )
+                    record_exception(e, span)
 
             reader = self._next_reader(extension, reader)
 
@@ -205,7 +242,7 @@ class ParseComponent:
         reader_name: str | None = None,
         execute_transformations: bool = True,
     ) -> list[BaseNode]:
-        return asyncio.run(
+        return run_sync(
             self._aload_data(
                 file_info=file_info,
                 file_metadata=file_metadata,

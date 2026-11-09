@@ -1,10 +1,13 @@
 import asyncio
+import json
 import logging
+import sys
 from collections.abc import AsyncGenerator
 from typing import Any
 
 from injector import Injector
-from llama_index.core.base.llms.types import ChatMessage
+from llama_index.core.base.llms.types import ChatMessage, TextBlock
+from llama_index.core.tools import BaseTool
 from pydantic import BaseModel
 
 from private_gpt.components.chat.processors.chat_history.memory.strategies.base_strategy import (
@@ -25,6 +28,11 @@ from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     BasicContentBlockType,
 )
+from private_gpt.observability.tracing import (
+    SpanKind,
+    set_span_attributes,
+    start_span,
+)
 from private_gpt.settings.settings import settings
 from private_gpt.utils.tokens import (
     AsyncTokenizerFn,
@@ -43,6 +51,39 @@ class CondenseResponse(BaseModel):
 
 
 CACHE_CONDENSE_STRATEGY: dict[str, BaseMemoryStrategy] = {}
+
+# Per message, an upper bound on the tokens a chat template adds around the content
+# (role markers, separators).
+_TEMPLATE_TOKENS_PER_MESSAGE = 16
+_TEMPLATE_TOKENS_FIXED = 256
+# Heuristic skip: assume at least this many bytes per token, and only within this
+# fraction of max_length.
+_MIN_BYTES_PER_TOKEN = 2
+_HEURISTIC_FILL = 0.75
+
+
+def _byte_upper_bound(chat_history: list[ChatMessage], tools: Any) -> int:
+    """Upper bound on the prompt's token count from its UTF-8 byte length."""
+    total = _TEMPLATE_TOKENS_FIXED
+    for message in chat_history:
+        total += _TEMPLATE_TOKENS_PER_MESSAGE
+        for block in message.blocks:
+            if not isinstance(block, TextBlock):
+                return sys.maxsize  # images/audio: no byte bound
+            total += len(block.text.encode())
+        if message.additional_kwargs:
+            total += len(json.dumps(message.additional_kwargs, default=str).encode())
+    for tool in tools or []:
+        total += _TEMPLATE_TOKENS_PER_MESSAGE + len(_tool_json(tool).encode())
+    return total
+
+
+def _tool_json(tool: Any) -> str:
+    if isinstance(tool, BaseTool):
+        return json.dumps(tool.metadata.to_openai_tool(), default=str)
+    if isinstance(tool, BaseModel):
+        return tool.model_dump_json()
+    return json.dumps(tool, default=str)
 
 
 async def condense_chat_history(
@@ -69,6 +110,35 @@ async def condense_chat_history(
     # 2. Check if condensation is needed
     if not chat_history or not max_length:
         yield CondenseResponse(chat_history=chat_history, condense_blocks=None)
+        return
+
+    # Skip the tokenizer (a remote call that renders the whole conversation) when
+    # the history clearly fits. Each token covers at least one byte of text, so a
+    # byte count within max_length is exact; code and prose run ~3-4 bytes per
+    # token, so half the bytes within 3/4 of max_length leaves a wide margin.
+    # Near the limit the exact count below still decides.
+    byte_bound = _byte_upper_bound(chat_history, kwargs.get("tools"))
+    if (
+        byte_bound <= max_length
+        or byte_bound // _MIN_BYTES_PER_TOKEN <= max_length * _HEURISTIC_FILL
+    ):
+        set_span_attributes(
+            **{
+                "pgpt.condensation.max_tokens": max_length,
+                "pgpt.condensation.byte_bound": byte_bound,
+                "pgpt.condensation.messages_before": len(conversation_history),
+                "pgpt.condensation.needed": False,
+            }
+        )
+        logger.debug(
+            "No condensation needed for conversation history "
+            "(byte bound %d, max length %d).",
+            byte_bound,
+            max_length,
+        )
+        yield CondenseResponse(
+            chat_history=system_messages + conversation_history, condense_blocks=None
+        )
         return
 
     # 2. Ensure that max_length - system_messages_length is greater than 0
@@ -110,6 +180,17 @@ async def condense_chat_history(
         tokenizer_fn=tokenizer_fn,
         message_to_input=message_to_input,
         **kwargs,
+    )
+    set_span_attributes(
+        **{
+            "pgpt.condensation.strategy": str(strategy_type),
+            "pgpt.condensation.max_tokens": max_length,
+            "pgpt.condensation.available_tokens": remaining_max_length,
+            "pgpt.condensation.tokens_before": current_token_count,
+            "pgpt.condensation.messages_before": len(conversation_history),
+            "pgpt.condensation.needed": condense_strategy is not None
+            and current_token_count > remaining_max_length,
+        }
     )
     if condense_strategy is None or current_token_count <= remaining_max_length:
         logger.debug(
@@ -155,6 +236,12 @@ async def condense_chat_history(
         message_to_input=message_to_input,
         **kwargs,
     )
+    set_span_attributes(
+        **{
+            "pgpt.condensation.tokens_after": current_token_count,
+            "pgpt.condensation.messages_after": len(condensed_history),
+        }
+    )
     if current_token_count > max_length:
         raise ValueError(
             "Condensed history exceeds maximum length after applying condensation strategy."
@@ -184,13 +271,21 @@ async def _apply_condensation_strategy(
 ) -> list[ChatMessage]:
     """Apply the specified condensation strategy to chat history."""
     try:
-        coro = condense_strategy.get_memory(
-            chat_history=chat_history, max_length=max_length, **kwargs
-        )
-        if timeout_seconds is None:
-            return await coro
-
-        return await asyncio.wait_for(coro, timeout=timeout_seconds)
+        with start_span(
+            f"condensation.{type(condense_strategy).__name__}",
+            SpanKind.CHAIN,
+            input={"messages": len(chat_history), "max_tokens": max_length},
+            attributes={"pgpt.condensation.timeout_s": timeout_seconds},
+        ) as span:
+            coro = condense_strategy.get_memory(
+                chat_history=chat_history, max_length=max_length, **kwargs
+            )
+            if timeout_seconds is None:
+                result = await coro
+            else:
+                result = await asyncio.wait_for(coro, timeout=timeout_seconds)
+            set_span_attributes(span, output={"messages": len(result)})
+            return result
     except TimeoutError as e:
         raise Errors.Overloaded(
             f"Condensation strategy timed out after {timeout_seconds} seconds",

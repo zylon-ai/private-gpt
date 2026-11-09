@@ -7,6 +7,8 @@ from typing import Any, cast
 from llama_index.core.schema import BaseNode, MetadataMode, TransformComponent
 from pydantic import Field
 
+from private_gpt.utils.async_utils import run_sync
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +33,7 @@ class AddTitleHeaderTransform(TransformComponent):
         return cls(default_title=default_title, batch_size=batch_size)
 
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
-        return asyncio.run(self.acall(nodes, **kwargs))
+        return run_sync(self.acall(nodes, **kwargs))
 
     async def acall(
         self, nodes: Sequence[BaseNode], **kwargs: Any
@@ -135,7 +137,7 @@ class ReduceHeaderLevelsTransform(TransformComponent):
         return cls(reduce_by=reduce_by, predicate=predicate, batch_size=batch_size)
 
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
-        return asyncio.run(self.acall(nodes, **kwargs))
+        return run_sync(self.acall(nodes, **kwargs))
 
     async def acall(
         self, nodes: Sequence[BaseNode], **kwargs: Any

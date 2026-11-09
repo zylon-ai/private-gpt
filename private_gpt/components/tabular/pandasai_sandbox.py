@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ from private_gpt.components.sandbox.base import (
     SandboxExecutionResult,
     SandboxSession,
 )
+from private_gpt.utils.async_utils import run_sync
 
 T = TypeVar("T")
 
@@ -141,8 +143,15 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         until the coroutine completes.
         """
         if self._loop is not None and self._loop.is_running():
-            return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
-        return asyncio.run(coro)
+            # Run with this thread's context so the sandbox calls nest under
+            # the current span (run_coroutine_threadsafe uses the loop's).
+            ctx = contextvars.copy_context()
+
+            async def in_context() -> T:
+                return await asyncio.create_task(coro, context=ctx)
+
+            return asyncio.run_coroutine_threadsafe(in_context(), self._loop).result()
+        return run_sync(coro)
 
     # ------------------------------------------------------------------
     # Lifecycle

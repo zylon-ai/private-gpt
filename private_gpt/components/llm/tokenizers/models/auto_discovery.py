@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, ParamSpec, TypeVar, cast
 
 from private_gpt.components.llm.tokenizers.models.model_discovery import discover_model
+from private_gpt.utils.async_utils import run_sync
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def auto_discover_model(
 
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            return asyncio.run(async_wrapper(*args, **kwargs))
+            return run_sync(async_wrapper(*args, **kwargs))
 
         if asyncio.iscoroutinefunction(func):
             return cast(Callable[P, T], async_wrapper)

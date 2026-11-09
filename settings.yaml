@@ -60,6 +60,14 @@ data:
 
 observability:
   mode: ${PGPT_OBSERVABILITY:none}
+  environment: ${PGPT_OBSERVABILITY_ENVIRONMENT:}
+  capture_content: ${PGPT_OBSERVABILITY_CAPTURE_CONTENT:true}
+  sampling_ratio: ${PGPT_OBSERVABILITY_SAMPLING_RATIO:1.0}
+  # More from PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>], like models.
+  exporters:
+    - type: jsonl
+      enabled: ${PGPT_OBSERVABILITY_JSONL_ENABLED:true}
+      path: ${PGPT_OBSERVABILITY_JSONL_PATH:local_data/traces/traces.jsonl}
 
 retrieval:
   top_k: ${PGPT_RETRIEVAL_TOP_K:32}
@@ -242,16 +250,6 @@ s3:
   temporary_bucket_name: ${PGPT_S3_TEMPORARY_BUCKET_NAME:zylon-temporary}
   connect_timeout_seconds: ${PGPT_S3_CONNECT_TIMEOUT_SECONDS:10}
   read_timeout_seconds: ${PGPT_S3_READ_TIMEOUT_SECONDS:120}
-
-phoenix:
-  url: ${PGPT_PHOENIX_URL:http://localhost:6006}
-
-opik:
-  host: ${PGPT_OPIK_HOST:http://localhost:5173/}
-  project_name: ${PGPT_OPIK_PROJECT_NAME:}
-  api_key: ${PGPT_OPIK_API_KEY:}
-  workspace: ${PGPT_OPIK_WORKSPACE:default}
-  task_threads: ${PGPT_OPIK_TASK_THREADS:16}
 
 principal:
   forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:authorization,anthropic-beta}

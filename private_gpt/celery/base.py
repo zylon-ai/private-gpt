@@ -7,7 +7,6 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-import nest_asyncio
 from celery.app.task import Task
 from celery.backends.redis import RedisBackend  # ty:ignore[unresolved-import]
 from celery.exceptions import Retry, SoftTimeLimitExceeded
@@ -281,7 +280,6 @@ class StatelessBackgroundTask(_BackgroundTask):
         thr: threading.Thread | None = None
         try:
             loop = asyncio.new_event_loop()
-            nest_asyncio.apply()
 
             thr = threading.Thread(target=loop.run_forever, daemon=True)
             if not thr.is_alive():
@@ -342,7 +340,6 @@ class StatefulBackgroundTask(_BackgroundTask):
                     return cls._loop
 
             loop = asyncio.new_event_loop()
-            nest_asyncio.apply(loop)
 
             def run_loop() -> None:
                 asyncio.set_event_loop(loop)

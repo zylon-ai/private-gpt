@@ -11,6 +11,7 @@ from private_gpt.events.interceptors.ping_event_interceptor import (
     PingEventInterceptor,
 )
 from private_gpt.events.models import Event
+from private_gpt.observability.tracing import link_current_span, trace_reference
 from private_gpt.server.chat.chat_facade import ChatFacadeService
 
 
@@ -51,6 +52,7 @@ class ChatAsyncService:
             metadata={
                 "message_count": len(request.messages),
                 "thinking_enabled": request.thinking.enabled,
+                **trace_reference(),
             },
         )
 
@@ -58,8 +60,10 @@ class ChatAsyncService:
         self, message_id: str
     ) -> AsyncGenerator[Event, None] | None:
         """Get Events stream for a chat completion."""
-        if not await self.stream_manager.stream_exists(message_id):
+        metadata = await self.stream_manager.get_stream_metadata(message_id)
+        if metadata is None:
             return None
+        link_current_span(metadata.metadata, message_id=message_id)
 
         event_generator = self.stream_manager.stream_events(
             event_handler=StreamingEventHandler(), correlation_id=message_id
@@ -76,4 +80,7 @@ class ChatAsyncService:
 
     async def get_stream_metadata(self, message_id: str) -> StreamMetadata | None:
         """Get stream status and metadata."""
-        return await self.stream_manager.get_stream_metadata(message_id)
+        metadata = await self.stream_manager.get_stream_metadata(message_id)
+        if metadata is not None:
+            link_current_span(metadata.metadata, message_id=message_id)
+        return metadata
