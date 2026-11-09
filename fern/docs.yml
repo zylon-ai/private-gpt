@@ -95,6 +95,9 @@ navigation:
           - page: API Route
             slug: providers/api-route
             path: ./docs/pages/providers/api-route.mdx
+          - page: Standard Compute
+            slug: providers/standardcompute
+            path: ./docs/pages/providers/standardcompute.mdx
       - section: Integrations
         skip-slug: true
         contents:

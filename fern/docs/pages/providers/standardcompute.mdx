@@ -1,0 +1,93 @@
+---
+title: "Standard Compute"
+description: "Configure PrivateGPT with Standard Compute for OpenAI-compatible chat models and a separate local embeddings server."
+---
+
+[Standard Compute](https://standardcompute.com) is a hosted, OpenAI-compatible LLM gateway at `https://api.stdcmpt.com/v1`. PrivateGPT can use it through the existing OpenAI-compatible integration.
+
+Standard Compute serves chat models. This setup sends chat requests to Standard Compute and keeps embeddings on your existing embedding setup, for example a local [Ollama](/providers/ollama) server. It does not require a new PrivateGPT backend.
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and choose a chat model">
+    1. Sign up at [standardcompute.com](https://standardcompute.com) and create an API key in the dashboard.
+    2. Set `STANDARDCOMPUTE_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export STANDARDCOMPUTE_API_KEY="your-standardcompute-api-key"
+    ```
+
+    3. Choose a model. `StandardCompute` is the routed model: it sends each request to the cheapest enabled model that can handle it, with automatic fallback. To pin a specific model instead, list the public catalog and use an exact ID from the response:
+
+    ```bash
+    curl https://api.stdcmpt.com/v1/models
+    ```
+
+    ```bash
+    export STANDARDCOMPUTE_MODEL="StandardCompute"
+    ```
+
+    See the [Standard Compute docs](https://docs.standardcompute.com) for the API reference.
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Skip this step if you already have an embeddings server. Otherwise, start Ollama and pull the embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    These examples use Ollama's OpenAI-compatible API at `http://localhost:11434/v1`, with the separate placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.stdcmpt.com/v1 \
+          OPENAI_API_KEY="$STANDARDCOMPUTE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$STANDARDCOMPUTE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.stdcmpt.com/v1 \
+          -e OPENAI_API_KEY="$STANDARDCOMPUTE_API_KEY" \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT="$STANDARDCOMPUTE_MODEL" \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`. Ollama must listen on an address reachable from the container.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.stdcmpt.com/v1 \
+          OPENAI_API_KEY="$STANDARDCOMPUTE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$STANDARDCOMPUTE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+## Model limits and capabilities
+
+- Use the model ID returned by `/v1/models` unchanged.
+- `/v1/models` returns `context_length` for each model, so PrivateGPT can set the context window from discovery.
+- Tools, streaming, reasoning, and image input depend on the selected model. Check `supported_parameters` in the `/v1/models` response.
+- The examples keep embeddings on a separate server. Retrieved document excerpts included in a chat prompt are still sent to the hosted API.
