@@ -240,143 +240,66 @@ class EmailTextReader(TextReader):
     def _extract_content_and_attachments(
         self, msg: Message, email_content: EmailContent
     ) -> None:
-        """Extract body content and attachments from email."""
-        is_multipart = msg.is_multipart()
-        processed_plain_text = False
-        processed_html = False
+        """Extract body content and attachments from email.
 
-        if is_multipart:
-            main_parts = []
-            for part in msg.get_payload():
-                if not isinstance(part, Message):
+        Every part is visited, however deeply it is nested (``msg.walk()``): a
+        message with an inline logo and an attachment holds its body three
+        levels down (mixed > related > alternative). The body is the message's
+        text parts in order, so a body split around an inline image stays
+        whole; HTML is used when there is no plain text, also for a message
+        that is a single HTML part.
+        """
+        texts: list[str] = []
+        htmls: list[str] = []
+        for part in msg.walk():
+            if part.is_multipart():
+                continue
+            # A named part that is not marked inline is a file, even without
+            # an explicit `attachment` disposition
+            disposition = part.get_content_disposition()
+            if disposition == "attachment" or (
+                disposition != "inline" and part.get_filename()
+            ):
+                filename = part.get_filename()
+                if self.include_attachments and filename:
+                    payload = part.get_payload(decode=True)
+                    email_content.attachments.append(
+                        {
+                            "filename": filename,
+                            "content_type": part.get_content_type(),
+                            "size": len(payload) if payload else 0,
+                        }
+                    )
+                continue
+            content_type = part.get_content_type()
+            if content_type not in ("text/plain", "text/html"):
+                continue
+            try:
+                payload = part.get_payload(decode=True)
+                if not payload or not isinstance(payload, bytes):
                     continue
+                charset = part.get_content_charset() or "utf-8"
+                decoded = payload.decode(charset, errors="replace")
+            except Exception as e:
+                logger.warning(f"Error decoding email part {content_type}: {e!s}")
+                continue
+            if content_type == "text/plain":
+                text = self.clean_email_text(decoded)
+                if text:
+                    texts.append(text)
+            elif decoded:
+                htmls.append(decoded)
 
-                if part.get_content_type() == "text/plain" and not processed_plain_text:
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload and isinstance(payload, bytes):
-                            charset = part.get_content_charset() or "utf-8"
-                            text = payload.decode(charset, errors="replace")
-                            text = self.clean_email_text(text)
-                            if text:
-                                email_content.body_text = text
-                                processed_plain_text = True
-                    except Exception as e:
-                        logger.warning(f"Error extracting plain text: {e!s}")
-
-                elif (
-                    part.get_content_type() == "text/html"
-                    and not processed_html
-                    and not processed_plain_text
-                ):
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload and isinstance(payload, bytes):
-                            charset = part.get_content_charset() or "utf-8"
-                            html = payload.decode(charset, errors="replace")
-                            if html:
-                                if self.html_to_text:
-                                    text = self.html_converter.handle(html)
-                                    text = self.clean_email_text(text)
-                                    if text:
-                                        email_content.body_text = text
-                                        processed_plain_text = True
-                                else:
-                                    email_content.body_html = html
-                                    processed_html = True
-                    except Exception as e:
-                        logger.warning(f"Error extracting HTML content: {e!s}")
-
-                elif part.is_multipart():
-                    for subpart in part.get_payload():
-                        if isinstance(subpart, Message):
-                            main_parts.append(subpart)
-
-                elif (
-                    part.get_content_disposition() == "attachment"
-                    and self.include_attachments
-                ):
-                    filename = part.get_filename()
-                    if filename:
-                        payload = part.get_payload(decode=True)
-                        size = len(payload) if payload else 0
-                        email_content.attachments.append(
-                            {
-                                "filename": filename,
-                                "content_type": part.get_content_type(),
-                                "size": size,
-                            }
-                        )
-                elif part.get_content_disposition() != "inline":
-                    main_parts.append(part)
-
-            # Process any nested parts
-            for part in main_parts:
-                if not isinstance(part, Message):
-                    continue
-
-                if part.get_content_type() == "text/plain" and not processed_plain_text:
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload and isinstance(payload, bytes):
-                            charset = part.get_content_charset() or "utf-8"
-                            text = payload.decode(charset, errors="replace")
-                            text = self.clean_email_text(text)
-                            if text:
-                                email_content.body_text = text
-                                processed_plain_text = True
-                    except Exception as e:
-                        logger.warning(f"Error extracting plain text: {e!s}")
-
-                elif (
-                    part.get_content_type() == "text/html"
-                    and not processed_html
-                    and not processed_plain_text
-                ):
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload and isinstance(payload, bytes):
-                            charset = part.get_content_charset() or "utf-8"
-                            html = payload.decode(charset, errors="replace")
-                            if html:
-                                if self.html_to_text:
-                                    text = self.html_converter.handle(html)
-                                    text = self.clean_email_text(text)
-                                    if text:
-                                        email_content.body_text = text
-                                        processed_plain_text = True
-                                else:
-                                    email_content.body_html = html
-                                    processed_html = True
-                    except Exception as e:
-                        logger.warning(f"Error extracting HTML content: {e!s}")
-
-                elif (
-                    part.get_content_disposition() == "attachment"
-                    and self.include_attachments
-                ):
-                    filename = part.get_filename()
-                    if filename:
-                        payload = part.get_payload(decode=True)
-                        size = len(payload) if payload else 0
-                        email_content.attachments.append(
-                            {
-                                "filename": filename,
-                                "content_type": part.get_content_type(),
-                                "size": size,
-                            }
-                        )
-        else:
-            # Handle non-multipart messages
-            payload = msg.get_payload(decode=True)
-            if payload and isinstance(payload, bytes):
-                try:
-                    charset = msg.get_content_charset() or "utf-8"
-                    text = payload.decode(charset, errors="replace")
-                    text = self.clean_email_text(text)
-                    email_content.body_text = text
-                except Exception as e:
-                    logger.warning(f"Error decoding email body: {e!s}")
+        if texts:
+            email_content.body_text = "\n\n".join(texts)
+        elif htmls and self.html_to_text:
+            converted = (
+                self.clean_email_text(self.html_converter.handle(html))
+                for html in htmls
+            )
+            email_content.body_text = "\n\n".join(text for text in converted if text)
+        elif htmls:
+            email_content.body_html = "\n".join(htmls)
 
         if not email_content.body_text and not email_content.body_html:
             logger.warning("No email body content was extracted")
