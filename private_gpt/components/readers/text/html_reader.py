@@ -31,9 +31,12 @@ class HtmlReader(TextReader):
         ):
             element.decompose()
 
-        # Remove XML/XBRL specific tags (anything with colons typically)
+        # Unwrap the remaining namespaced tags (`ix:nonFraction`, Word's `st1:City`):
+        # their markup is not HTML, but their text is the document's own. Inline
+        # XBRL keeps every reported figure in such a tag, so removing it removed
+        # the numbers.
         for element in soup.find_all(re.compile(r"^[^:]*:")):
-            element.decompose()
+            element.unwrap()
 
         # Get text content from body if it exists, otherwise from entire document
         body = soup.find("body")
