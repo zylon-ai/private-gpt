@@ -3024,3 +3024,70 @@ def test_multiple_server_searches_across_turns_all_stay_citable() -> None:
     )
 
     assert len(documents) == 3
+
+
+def test_server_tool_result_mid_conv_system_is_not_repeated() -> None:
+    """A mid-conversation system block inside a server result is text, not data.
+
+    ``_extract_content`` turns it into text, so keeping it next to ``render()``
+    (which already includes it) would repeat the instructions in the observation.
+    """
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_midconv",
+        content=[
+            TextBlock(text="result"),
+            MidConvSystemBlock(content=[TextBlock(text="Be concise.")]),
+            _source_block("chunk"),
+        ],
+    )
+
+    converted = MessageInput.convert_from_llama_index_messages(
+        [_server_turn("srvtoolu_midconv", result)]
+    )
+
+    tool = _tool_message(converted, "srvtoolu_midconv")
+    assert tool.content == result.render()
+    assert "mid_conv_system" not in tool.additional_kwargs
+    assert tool.additional_kwargs["source"] == [result.content[2]]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        pytest.param(lambda: _source_block("a"), id="source"),
+        pytest.param(
+            lambda: MidConvSystemBlock(content=[TextBlock(text="Be concise.")]),
+            id="mid_conv_system",
+        ),
+        pytest.param(
+            lambda: BashCodeExecutionResultBlock(
+                stdout="ok\n", stderr="", return_code=0
+            ),
+            id="renderable",
+        ),
+        pytest.param(
+            lambda: ResourceLinkBlock(uri="file:///report.md", name="report.md"),
+            id="resource_link",
+        ),
+        pytest.param(
+            lambda: SearchResultBlock(
+                source="https://example.com",
+                title="Example",
+                content=[TextBlock(text="result body")],
+            ),
+            id="search_result",
+        ),
+    ],
+)
+def test_server_tool_result_observation_is_exactly_render(extra: Any) -> None:
+    """Through the full converter, the LLM sees ``render()`` and nothing more."""
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_obs",
+        content=[TextBlock(text="head"), extra(), TextBlock(text="tail")],
+    )
+
+    converted = MessageInput.convert_from_llama_index_messages(
+        [_server_turn("srvtoolu_obs", result)]
+    )
+
+    assert _tool_message(converted, "srvtoolu_obs").content == result.render()

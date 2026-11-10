@@ -565,8 +565,10 @@ class MessageInput(BaseModel):
         that ``render()`` cannot carry (sources, documents, images, resources, ...)
         is added back after it, so later stages still find them: the ``source``
         blocks are what citations of earlier turns resolve against, and dropping
-        them blanked every follow-up citation. Text and renderable blocks are not
-        re-added because ``render()`` already contains them.
+        them blanked every follow-up citation. Blocks that ``_extract_content``
+        turns into text (text, mid-conversation system and renderable blocks) are
+        not re-added: ``render()`` already contains them, and re-adding one would
+        repeat its text in the observation.
         """
         rendered = block.render()
         if isinstance(block.content, str) or not isinstance(block.content, Sequence):
@@ -575,7 +577,7 @@ class MessageInput(BaseModel):
         structured = [
             cast(ContentBlockType, item)
             for item in block.content
-            if not isinstance(item, TextBlock) and not isinstance(item, Renderable)
+            if not isinstance(item, (TextBlock, MidConvSystemBlock, Renderable))
         ]
         if not structured:
             return rendered
