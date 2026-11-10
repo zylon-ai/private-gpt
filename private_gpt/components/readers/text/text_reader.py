@@ -1,4 +1,5 @@
 import asyncio
+import codecs
 import logging
 from collections.abc import AsyncIterator, Iterable, Iterator
 from pathlib import Path
@@ -40,11 +41,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
+# latin-1 decodes every byte, so cp1252 has to be tried before it: the other
+# way round, cp1252's quotes, dashes and euro sign come back as C1 controls.
 SUPPORTED_ENCODINGS = [
     "utf-8",
-    "latin-1",
-    "ascii",
     "cp1252",
+    "ascii",
+    "latin-1",
     "ISO-8859-1",
     "windows-1252",
 ]
@@ -69,11 +72,14 @@ class TextReader(IngestionReader):
         # archive "succeeds" and comes back as pages of garbage text.
         with open(file_path, "rb") as file:
             head = file.read(8192)
-        if b"\x00" in head or media_kind(head) is not None:
+        # UTF-16 stores a NUL byte in every ASCII character, so its
+        # byte-order mark is checked before the NUL test for binary data.
+        is_utf16 = head.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE))
+        if not is_utf16 and (b"\x00" in head or media_kind(head) is not None):
             raise RuntimeError(f"{file_path.name} is binary, not a text file.")
 
         encoding = encoding.lower() if encoding else None
-        encodings = SUPPORTED_ENCODINGS.copy()
+        encodings = ["utf-16"] if is_utf16 else SUPPORTED_ENCODINGS.copy()
 
         if encoding and encoding.lower() not in [
             e.lower() for e in SUPPORTED_ENCODINGS
