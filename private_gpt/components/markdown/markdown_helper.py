@@ -4,6 +4,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from llama_index.core.utils import iter_batch
 
+# Opening or closing line of a fenced code block (``` or ~~~).
+_CODE_FENCE_PATTERN = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# Inline code span: a run of backticks closed by a run of the same length.
+_CODE_SPAN_PATTERN = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)")
+
 
 class MarkdownHelper:
     @staticmethod
@@ -21,17 +26,22 @@ class MarkdownHelper:
 
         # Quick check if any formatting exists
         if not is_table_row and ("*" in processed or "_" in processed):
+            # `_` only delimits emphasis at a word boundary, never inside a word
+            # such as snake_case or MAX_TOKENS.
+
             # 1. Remove bold-italic first (***text*** or ___text___)
             if "***" in processed:
                 processed = re.sub(r"\*\*\*(.*?)\*\*\*", r"\1", processed)
             if "___" in processed:
-                processed = re.sub(r"___(.*?)___", r"\1", processed)
+                processed = re.sub(r"(?<!\w)___(.*?)___(?!\w)", r"\1", processed)
 
             # 2. Remove bold (**text** or __text__)
             if "**" in processed:
                 processed = re.sub(r"(?<!\\)\*\*(.*?)(?<!\\)\*\*", r"\1", processed)
             if "__" in processed:
-                processed = re.sub(r"(?<!\\)__(.*?)(?<!\\)__", r"\1", processed)
+                processed = re.sub(
+                    r"(?<![\w\\])__(.*?)(?<!\\)__(?!\w)", r"\1", processed
+                )
 
             # 3. Remove italic (*text* or _text_)
             if "*" in processed:
@@ -39,7 +49,7 @@ class MarkdownHelper:
                     r"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)", r"\1", processed
                 )
             if "_" in processed:
-                processed = re.sub(r"(?<!_)_(?!_)(.*?)(?<!_)_(?!_)", r"\1", processed)
+                processed = re.sub(r"(?<!\w)_(?!_)(.*?)(?<!_)_(?!\w)", r"\1", processed)
 
         # Handle list-specific formatting after removing text formatting
         # Remove excessive spaces from headings, lists, and blockquotes
@@ -128,13 +138,17 @@ class MarkdownHelper:
                 _placeholders.append(match.group(0))
                 return placeholder
 
-            protected = re.sub(combined_pattern, replace, text)
+            # Inline code is literal text: protect it before anything else
+            protected = _CODE_SPAN_PATTERN.sub(replace, text)
+            protected = re.sub(combined_pattern, replace, protected)
             return protected
 
         def restore(text: str) -> str:
             """Restore patterns from placeholders."""
             result = text
-            for i, pattern in enumerate(_placeholders):
+            # Newest first: a link may wrap an earlier placeholder (inline code),
+            # and PATTERN-PLACEHOLDER-1 is a prefix of PATTERN-PLACEHOLDER-10.
+            for i, pattern in reversed(list(enumerate(_placeholders))):
                 placeholder = f"PATTERN-PLACEHOLDER-{i}"
                 result = result.replace(placeholder, pattern)
             return result
@@ -142,12 +156,42 @@ class MarkdownHelper:
         return protect, restore
 
     @staticmethod
-    def _sanity_markdown_batches(data: tuple[int, list[str]]) -> tuple[int, list[str]]:
+    def _flag_fenced_code_lines(lines: list[str]) -> list[tuple[str, bool]]:
+        """Pair each line with whether it is part of a fenced code block."""
+        flagged = []
+        fence: str | None = None
+        for line in lines:
+            match = _CODE_FENCE_PATTERN.match(line)
+            if fence is None:
+                # A backtick fence cannot have backticks in its info string
+                if match and not (
+                    match.group(1)[0] == "`" and "`" in line[match.end() :]
+                ):
+                    fence = match.group(1)
+                flagged.append((line, fence is not None))
+            else:
+                flagged.append((line, True))
+                if (
+                    match
+                    and match.group(1)[0] == fence[0]
+                    and len(match.group(1)) >= len(fence)
+                    and not line[match.end() :].strip()
+                ):
+                    fence = None
+        return flagged
+
+    @staticmethod
+    def _sanity_markdown_batches(
+        data: tuple[int, list[tuple[str, bool]]],
+    ) -> tuple[int, list[str]]:
         index, lines = data
 
         processed = []
-        for line in lines:
-            processed.append(MarkdownHelper._safe_sanity_data(line))
+        for line, is_code in lines:
+            # Code is kept as written: `*` and `_` there are not emphasis
+            processed.append(
+                line if is_code else MarkdownHelper._safe_sanity_data(line)
+            )
 
         return index, processed
 
@@ -169,7 +213,11 @@ class MarkdownHelper:
 
         # Split into chunks while trying to preserve line boundaries
         lines = markdown.splitlines(keepends=True)
-        batches: list[list[str]] = list(iter_batch(lines, chunk_size))
+        # Fences are tracked over the whole text so blocks can span batches
+        flagged_lines = MarkdownHelper._flag_fenced_code_lines(lines)
+        batches: list[list[tuple[str, bool]]] = list(
+            iter_batch(flagged_lines, chunk_size)
+        )
 
         # Create pool of workers
         processed_chunks: list[tuple[int, list[str]]] = []
