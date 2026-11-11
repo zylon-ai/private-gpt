@@ -101,6 +101,9 @@ navigation:
           - page: Standard Compute
             slug: providers/standardcompute
             path: ./docs/pages/providers/standardcompute.mdx
+          - page: Atlas Cloud
+            slug: providers/atlascloud
+            path: ./docs/pages/providers/atlascloud.mdx
       - section: Integrations
         skip-slug: true
         contents:
