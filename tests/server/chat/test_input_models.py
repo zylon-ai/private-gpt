@@ -17,8 +17,11 @@ from private_gpt.events.models import (
     BashCodeExecutionToolResultBlock,
     ClientToolResultBlock,
     ClientToolUseBlock,
+    DocumentBlock,
     ImageBlock,
     MidConvSystemBlock,
+    ResourceLinkBlock,
+    SearchResultBlock,
     ServerToolResultBlock,
     ServerToolUseBlock,
     SourceBlock,
@@ -2735,3 +2738,356 @@ def test_assistant_string_content_converts_to_one_llama_block() -> None:
     assert len(assistant) == 1
     assert len(assistant[0].blocks) == 1
     assert assistant[0].content == text
+
+
+# ---------------------------------------------------------------------------
+# server_tool_result history: structured blocks must survive the client rewrite
+# ---------------------------------------------------------------------------
+
+
+def _source_block(*texts: str) -> SourceBlock:
+    return SourceBlock(
+        sources=[
+            Chunk.from_node(NodeWithScore(node=TextNode(text=text), score=0.9))
+            for text in texts
+        ]
+    )
+
+
+def _server_turn(tool_id: str, result: ServerToolResultBlock) -> MessageInput:
+    return MessageInput(
+        role="assistant",
+        content=[
+            ServerToolUseBlock(
+                id=tool_id, name="knowledge_search", input={"query": "q"}
+            ),
+            result,
+        ],
+    )
+
+
+def _tool_message(messages: list[ChatMessage], tool_id: str) -> ChatMessage:
+    return next(
+        m
+        for m in messages
+        if m.role == MessageRole.TOOL
+        and m.additional_kwargs.get("tool_call_id") == tool_id
+    )
+
+
+def test_server_tool_result_keeps_source_blocks_in_history() -> None:
+    """Regression: follow-up citations went blank because sources were dropped."""
+    source = _source_block("Ollie lives inside Opik", "Diagnostics surfaces errors")
+    result = ServerToolResultBlock(tool_use_id="srvtoolu_src", content=[source])
+
+    converted = MessageInput.convert_from_llama_index_messages(
+        [_server_turn("srvtoolu_src", result)]
+    )
+
+    tool = _tool_message(converted, "srvtoolu_src")
+    assert tool.additional_kwargs["source"] == [source]
+    # The LLM-facing observation is still exactly render().
+    assert tool.content == result.render()
+
+
+def test_server_tool_result_sources_match_client_tool_result_sources() -> None:
+    """A server result must yield the same citable documents as a client one."""
+    source = _source_block("chunk a", "chunk b")
+    client = MessageInput(
+        role="assistant",
+        content=[
+            ToolUseBlock(id="toolu_same", name="knowledge_search", input={}),
+            ToolResultBlock(tool_use_id="toolu_same", content=[source]),
+        ],
+    )
+    server = _server_turn(
+        "toolu_same", ServerToolResultBlock(tool_use_id="toolu_same", content=[source])
+    )
+
+    _, client_docs, _ = asyncio.run(
+        process_history_citations(
+            MessageInput.convert_from_llama_index_messages([client])
+        )
+    )
+    _, server_docs, _ = asyncio.run(
+        process_history_citations(
+            MessageInput.convert_from_llama_index_messages([server])
+        )
+    )
+
+    assert len(server_docs) == 2
+    assert {d.id_ for d in server_docs} == {d.id_ for d in client_docs}
+
+
+def test_follow_up_keeps_citations_of_previous_server_search() -> None:
+    """End to end: a turn-2 history keeps turn-1 citations as ``[ID]`` markers.
+
+    Before the fix the turn-1 sources were lost, every earlier ``<citation>`` was
+    treated as unknown and deleted, and the model copied the resulting blank gap.
+    """
+    source = _source_block("Diagnostics surfaces errors from thousands of traces")
+    chunk = source.sources[0]
+    assert isinstance(chunk, Chunk)
+    turn_1 = _server_turn(
+        "srvtoolu_turn1",
+        ServerToolResultBlock(tool_use_id="srvtoolu_turn1", content=[source]),
+    )
+    _, documents, _ = asyncio.run(
+        process_history_citations(
+            MessageInput.convert_from_llama_index_messages([turn_1])
+        )
+    )
+    cite_id = documents[0].id
+    citation = (
+        f"<citation id='{cite_id}' index='0' artifact_id='{chunk.document.artifact}' "
+        f"source_id='{chunk.id}'></citation>"
+    )
+    messages = [
+        MessageInput(role="user", content="How does Opik detect silent errors?"),
+        MessageInput(
+            role="assistant",
+            content=[
+                *turn_1.content,  # type: ignore[misc]
+                TextBlock(text=f"It surfaces errors with no error message {citation}."),
+            ],
+        ),
+        MessageInput(role="user", content="Summarize that without searching again."),
+    ]
+
+    history, documents, _ = asyncio.run(
+        process_history_citations(
+            MessageInput.convert_from_llama_index_messages(messages)
+        )
+    )
+
+    assert [d.id_ for d in documents] == [chunk.id]
+    answer = next(
+        m.content
+        for m in history
+        if m.role == MessageRole.ASSISTANT
+        and m.content
+        and "error message" in m.content
+    )
+    assert answer.endswith(f"error message [{cite_id}].")
+
+
+@pytest.mark.parametrize(
+    "structured",
+    [
+        pytest.param(lambda: _source_block("a"), id="source"),
+        pytest.param(
+            lambda: ImageBlock.model_validate(
+                {"source": {"type": "url", "url": "https://example.com/a.png"}}
+            ),
+            id="image",
+        ),
+        pytest.param(
+            lambda: DocumentBlock.model_validate(
+                {
+                    "source": {
+                        "type": "text",
+                        "media_type": "text/plain",
+                        "data": "doc body",
+                    }
+                }
+            ),
+            id="document",
+        ),
+        pytest.param(
+            lambda: ResourceLinkBlock(uri="file:///report.md", name="report.md"),
+            id="resource_link",
+        ),
+        pytest.param(
+            lambda: SearchResultBlock(
+                source="https://example.com",
+                title="Example",
+                content=[TextBlock(text="result body")],
+            ),
+            id="search_result",
+        ),
+    ],
+)
+def test_server_tool_result_keeps_every_structured_block(structured: Any) -> None:
+    block = structured()
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_struct",
+        content=[TextBlock(text="before"), block, TextBlock(text="after")],
+    )
+
+    rewritten = MessageInput._standalone_server_tool_messages(
+        [_server_turn("srvtoolu_struct", result)]
+    )
+    tool_result = rewritten[0].content[1]  # type: ignore[index]
+
+    assert isinstance(tool_result, ToolResultBlock)
+    assert not isinstance(tool_result, ServerToolResultBlock)
+    assert isinstance(tool_result.content, list)
+    # Text (the whole render()) first, then the structured block, once.
+    assert isinstance(tool_result.content[0], TextBlock)
+    assert tool_result.content[0].text == result.render()
+    assert tool_result.content[1:] == [block]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param("plain string result", id="string"),
+        pytest.param([TextBlock(text="one"), TextBlock(text="two")], id="text_only"),
+        pytest.param([], id="empty"),
+        pytest.param(
+            [
+                BashCodeExecutionResultBlock(stdout="ok\n", stderr="", return_code=0),
+                TextBlock(text="note"),
+            ],
+            id="renderable_and_text",
+        ),
+    ],
+)
+def test_server_tool_result_without_structured_blocks_stays_rendered_text(
+    content: Any,
+) -> None:
+    """Results with nothing structured keep the previous plain render() string."""
+    result = ServerToolResultBlock(tool_use_id="srvtoolu_text", content=content)
+
+    rewritten = MessageInput._standalone_server_tool_messages(
+        [_server_turn("srvtoolu_text", result)]
+    )
+    tool_result = rewritten[0].content[1]  # type: ignore[index]
+
+    assert isinstance(tool_result, ToolResultBlock)
+    assert tool_result.content == result.render()
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        pytest.param(
+            lambda: BashCodeExecutionToolResultBlock(
+                tool_use_id="srvtoolu_typed",
+                content=BashCodeExecutionResultBlock(
+                    stdout="ok\n", stderr="", return_code=0
+                ),
+            ),
+            id="bash_single_block",
+        ),
+    ],
+)
+def test_typed_server_tool_results_stay_rendered_text(result: Any) -> None:
+    block = result()
+    rewritten = MessageInput._standalone_server_tool_messages(
+        [_server_turn("srvtoolu_typed", block)]
+    )
+    tool_result = rewritten[0].content[1]  # type: ignore[index]
+
+    assert isinstance(tool_result, ToolResultBlock)
+    assert tool_result.content == block.render()
+
+
+def test_server_tool_result_error_flag_is_preserved() -> None:
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_err",
+        content=[TextBlock(text="boom"), _source_block("partial")],
+        is_error=True,
+    )
+
+    rewritten = MessageInput._standalone_server_tool_messages(
+        [_server_turn("srvtoolu_err", result)]
+    )
+    tool_result = rewritten[0].content[1]  # type: ignore[index]
+
+    assert isinstance(tool_result, ToolResultBlock)
+    assert tool_result.is_error is True
+
+
+def test_multiple_server_searches_across_turns_all_stay_citable() -> None:
+    """Every earlier search (several turns, several results) stays citable."""
+    first = _source_block("turn one a", "turn one b")
+    second = _source_block("turn two a")
+    messages = [
+        MessageInput(role="user", content="first question"),
+        _server_turn(
+            "srvtoolu_t1",
+            ServerToolResultBlock(tool_use_id="srvtoolu_t1", content=[first]),
+        ),
+        MessageInput(role="user", content="second question"),
+        _server_turn(
+            "srvtoolu_t2",
+            ServerToolResultBlock(tool_use_id="srvtoolu_t2", content=[second]),
+        ),
+        MessageInput(role="user", content="third question, no search"),
+    ]
+
+    _, documents, _ = asyncio.run(
+        process_history_citations(
+            MessageInput.convert_from_llama_index_messages(messages)
+        )
+    )
+
+    assert len(documents) == 3
+
+
+def test_server_tool_result_mid_conv_system_is_not_repeated() -> None:
+    """A mid-conversation system block inside a server result is text, not data.
+
+    ``_extract_content`` turns it into text, so keeping it next to ``render()``
+    (which already includes it) would repeat the instructions in the observation.
+    """
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_midconv",
+        content=[
+            TextBlock(text="result"),
+            MidConvSystemBlock(content=[TextBlock(text="Be concise.")]),
+            _source_block("chunk"),
+        ],
+    )
+
+    converted = MessageInput.convert_from_llama_index_messages(
+        [_server_turn("srvtoolu_midconv", result)]
+    )
+
+    tool = _tool_message(converted, "srvtoolu_midconv")
+    assert tool.content == result.render()
+    assert "mid_conv_system" not in tool.additional_kwargs
+    assert tool.additional_kwargs["source"] == [result.content[2]]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        pytest.param(lambda: _source_block("a"), id="source"),
+        pytest.param(
+            lambda: MidConvSystemBlock(content=[TextBlock(text="Be concise.")]),
+            id="mid_conv_system",
+        ),
+        pytest.param(
+            lambda: BashCodeExecutionResultBlock(
+                stdout="ok\n", stderr="", return_code=0
+            ),
+            id="renderable",
+        ),
+        pytest.param(
+            lambda: ResourceLinkBlock(uri="file:///report.md", name="report.md"),
+            id="resource_link",
+        ),
+        pytest.param(
+            lambda: SearchResultBlock(
+                source="https://example.com",
+                title="Example",
+                content=[TextBlock(text="result body")],
+            ),
+            id="search_result",
+        ),
+    ],
+)
+def test_server_tool_result_observation_is_exactly_render(extra: Any) -> None:
+    """Through the full converter, the LLM sees ``render()`` and nothing more."""
+    result = ServerToolResultBlock(
+        tool_use_id="srvtoolu_obs",
+        content=[TextBlock(text="head"), extra(), TextBlock(text="tail")],
+    )
+
+    converted = MessageInput.convert_from_llama_index_messages(
+        [_server_turn("srvtoolu_obs", result)]
+    )
+
+    assert _tool_message(converted, "srvtoolu_obs").content == result.render()

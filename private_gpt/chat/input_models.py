@@ -521,7 +521,8 @@ class MessageInput(BaseModel):
 
         The prompt path only understands client ``tool_use`` / ``tool_result``.
         Server-executed history must therefore land as the same llama-index
-        messages, with the tool-result text taken from ``render()``.
+        messages, with the tool-result text taken from ``render()`` and the
+        structured blocks kept (see ``_server_tool_result_content``).
         """
         rewritten: list[MessageInput] = []
         for msg in messages:
@@ -541,11 +542,10 @@ class MessageInput(BaseModel):
                         )
                     )
                 elif isinstance(block, ServerToolResultBlock):
-                    rendered = block.render()
                     content.append(
                         ToolResultBlock(
                             tool_use_id=block.tool_use_id,
-                            content=rendered,
+                            content=cls._server_tool_result_content(block),
                             is_error=block.is_error,
                         )
                     )
@@ -554,6 +554,34 @@ class MessageInput(BaseModel):
 
             rewritten.append(MessageInput(role=msg.role, content=content))
         return rewritten
+
+    @staticmethod
+    def _server_tool_result_content(
+        block: ServerToolResultBlock,
+    ) -> str | list[ContentBlockType]:
+        """Client-shaped content for a server tool result.
+
+        The LLM-facing text stays ``render()``, unchanged. Every structured block
+        that ``render()`` cannot carry (sources, documents, images, resources, ...)
+        is added back after it, so later stages still find them: the ``source``
+        blocks are what citations of earlier turns resolve against, and dropping
+        them blanked every follow-up citation. Blocks that ``_extract_content``
+        turns into text (text, mid-conversation system and renderable blocks) are
+        not re-added: ``render()`` already contains them, and re-adding one would
+        repeat its text in the observation.
+        """
+        rendered = block.render()
+        if isinstance(block.content, str) or not isinstance(block.content, Sequence):
+            return rendered
+
+        structured = [
+            cast(ContentBlockType, item)
+            for item in block.content
+            if not isinstance(item, (TextBlock, MidConvSystemBlock, Renderable))
+        ]
+        if not structured:
+            return rendered
+        return [TextBlock(text=rendered), *structured]
 
     @classmethod
     def _process_messages(cls, messages: list["MessageInput"]) -> list["MessageInput"]:
