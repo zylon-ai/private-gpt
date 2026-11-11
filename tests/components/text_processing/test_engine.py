@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from private_gpt.components.text_processing import (
     Action,
@@ -129,3 +129,34 @@ def test_feed_reparses_from_clean_initial_rule_state() -> None:
     assert processor.feed("#").text == "1"
     assert processor.feed("#").text == "2"
     assert processor.context.state == {"count": 2}
+
+
+@dataclass
+class TriggeredTokenRule(TokenRule):
+    triggers: str = "<"
+    probed: list[int] = field(default_factory=list)
+
+    def probe(
+        self, text: str, position: int, context: ProcessingContext
+    ) -> ProbeResult:
+        self.probed.append(position)
+        return super().probe(text, position, context)
+
+
+def test_rule_with_triggers_is_only_probed_at_trigger_characters() -> None:
+    rule = TriggeredTokenRule("<replace>", Action.REPLACE, "done")
+    processor = IncrementalTextProcessor([rule])
+
+    result = processor.process("plain <replace> text < <rep")
+
+    assert result.text == "plain done text < "
+    assert result.pending == "<rep"
+    assert rule.probed == [6, 21, 23]
+
+
+def test_rule_without_triggers_is_probed_at_every_position() -> None:
+    rule = TriggeredTokenRule("<replace>", Action.REPLACE, "done", triggers="")
+    processor = IncrementalTextProcessor([rule])
+
+    assert processor.process("a <b").text == "a <b"
+    assert rule.probed == [0, 1, 2, 3]

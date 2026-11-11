@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
@@ -15,6 +16,26 @@ if TYPE_CHECKING:
     from private_gpt.components.text_processing.rules import StreamRule
 
 
+def _compile_triggers(rules: list[StreamRule]) -> re.Pattern[str] | None:
+    """Pattern matching the characters at which any rule could match.
+
+    A rule may declare ``triggers``: the characters its ``probe`` can match
+    at. At any other position it returns NO_MATCH, so the text up to the next
+    trigger is copied as-is in one step. If a rule doesn't declare them, every
+    position is probed.
+    """
+    characters: set[str] = set()
+    for rule in rules:
+        triggers = getattr(rule, "triggers", None)
+        if not triggers:
+            return None
+        characters.update(triggers)
+    if not characters:
+        # No rules: nothing can match, copy everything.
+        return re.compile(r"(?!)")
+    return re.compile("[" + "".join(re.escape(c) for c in sorted(characters)) + "]")
+
+
 class IncrementalTextProcessor:
     def __init__(
         self,
@@ -22,6 +43,7 @@ class IncrementalTextProcessor:
         initial_state: dict[str, object] | None = None,
     ) -> None:
         self._rules = sorted(rules, key=lambda rule: rule.priority, reverse=True)
+        self._triggers = _compile_triggers(self._rules)
         self._initial_state = deepcopy(initial_state or {})
         self._source = ""
         self._emitted = ""
@@ -42,6 +64,14 @@ class IncrementalTextProcessor:
         cursor = 0
 
         while cursor < len(text):
+            if self._triggers is not None and not self._triggers.match(text, cursor):
+                # No rule can match before the next trigger: copy up to it.
+                match = self._triggers.search(text, cursor)
+                literal_end = match.start() if match else len(text)
+                output.append(text[cursor:literal_end])
+                cursor = literal_end
+                continue
+
             probe = None
             for rule in self._rules:
                 candidate = rule.probe(text, cursor, active_context)

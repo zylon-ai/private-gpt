@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from private_gpt.components.text_processing.models import (
     Action,
@@ -14,6 +14,13 @@ from private_gpt.components.text_processing.models import (
 
 
 class StreamRule(Protocol):
+    """A rule the IncrementalTextProcessor probes at each position.
+
+    A rule may also define ``triggers``, the characters at which ``probe`` can
+    return anything but NO_MATCH; the processor then skips the text between
+    them instead of probing every character.
+    """
+
     name: str
     priority: int
 
@@ -35,6 +42,11 @@ class DelimitedReferenceRule:
     render: RenderReferences
     name: str = "delimited_reference"
     priority: int = 100
+
+    @property
+    def triggers(self) -> str | None:
+        # probe() only matches where the start token begins.
+        return self.start_token[:1] or None
 
     def probe(
         self, text: str, position: int, context: ProcessingContext
@@ -97,6 +109,8 @@ class BacktickUnwrapRule:
     priority: int = 200
     code_state_key: str = "backtick_code_delimiter"
     wrapper_state_key: str = "backtick_wrapper_delimiter"
+    # probe() only matches at a backtick.
+    triggers: ClassVar[str] = "`"
 
     def probe(
         self, text: str, position: int, context: ProcessingContext
