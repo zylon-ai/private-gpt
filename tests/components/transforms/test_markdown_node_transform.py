@@ -3,6 +3,7 @@ import unittest
 from private_gpt.components.ingest.transformations.markdown_to_tree_transform import (
     MarkdownTreeNodeParser,
 )
+from private_gpt.components.readers.nodes.section_node import SectionNode
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 
 SAMPLE_MARKDOWN = """\
@@ -175,6 +176,46 @@ class TestMarkdownParser(unittest.TestCase):
         self._round_trip_test(markdown)
         markdown = "> Blockquote level 1\n>> Blockquote level 2\n>>> Blockquote level 3"
         self._round_trip_test(markdown)
+
+    def test_blockquote_keeps_spaces_around_inline_elements(self) -> None:
+        """Words next to links and inline code must not be glued together."""
+        markdown = "> See the [guide](http://example.com) and run `make test` now."
+        serialized = self._serialize_tree(self.parser.parse(markdown))
+        assert serialized.strip() == "> See the guide and run make test now."
+
+    def test_blockquote_keeps_lists(self) -> None:
+        """Lists inside a blockquote must not be dropped."""
+        markdown = "> Steps:\n>\n> - First item\n> - Second item\n>\n> Done."
+        serialized = self._serialize_tree(self.parser.parse(markdown))
+        assert serialized.strip() == (
+            "> Steps:\n\n> * First item\n> * Second item\n\n> Done."
+        )
+
+    def test_blockquote_keeps_code_blocks(self) -> None:
+        """Code blocks inside a blockquote must not be dropped."""
+        markdown = "> ```python\n> first line\n>\n>     indented line\n> ```"
+        self._round_trip_test(markdown)
+
+    def test_blockquote_keeps_headings(self) -> None:
+        """Headings inside a blockquote stay quoted text, not document sections."""
+        markdown = "> ## Quoted heading\n>\n> Quoted text"
+        root = self.parser.parse(markdown)
+        assert self._serialize_tree(root).strip() == (
+            "> ## Quoted heading\n\n> Quoted text"
+        )
+        assert not isinstance(root.children[0], SectionNode)
+
+    def test_blockquote_skips_thematic_breaks(self) -> None:
+        """Thematic breaks have no text to keep."""
+        markdown = "> Before\n>\n> ---\n>\n> After"
+        serialized = self._serialize_tree(self.parser.parse(markdown))
+        assert serialized.strip() == "> Before\n\n> After"
+
+    def test_nested_blockquote_keeps_lists(self) -> None:
+        """Lists keep the prefix of the nested blockquote that contains them."""
+        markdown = "> Outer\n>\n> > - Inner item"
+        serialized = self._serialize_tree(self.parser.parse(markdown))
+        assert serialized.strip() == "> Outer\n>> * Inner item"
 
     def test_typographic_replacements(self) -> None:
         """Test typographic replacements."""
