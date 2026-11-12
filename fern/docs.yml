@@ -101,6 +101,9 @@ navigation:
           - page: Standard Compute
             slug: providers/standardcompute
             path: ./docs/pages/providers/standardcompute.mdx
+          - page: HopBase
+            slug: providers/hopbase
+            path: ./docs/pages/providers/hopbase.mdx
       - section: Integrations
         skip-slug: true
         contents:
