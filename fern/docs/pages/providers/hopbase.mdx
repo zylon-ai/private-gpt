@@ -19,7 +19,7 @@ HopBase serves chat models and does not serve embedding models. This setup sends
 | Streaming | ✅ |
 | Vision / image input | ✅ model-dependent |
 
-Tool calling, JSON-schema output and streaming were checked against the live API with `gpt-6.1-sol` and `glm-5.3`. Image input was checked with `gpt-6.1-sol`; `glm-5.3` rejects images.
+Tool calling and streaming were checked against the live API with `gpt-6.1-sol` and `glm-5.3`. JSON-schema output follows the schema on `gpt-6.1-sol`; `glm-5.3` accepts the parameter but does not reliably follow the schema, so validate its output. Image input was checked with `gpt-6.1-sol`; `glm-5.3` rejects images.
 
 ---
 
