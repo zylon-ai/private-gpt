@@ -7,6 +7,7 @@ from fastapi.openapi.models import Example
 from llama_index.core.schema import BaseNode
 from pydantic import BaseModel, Field
 
+from private_gpt.celery.model import Task, TaskStatus
 from private_gpt.components.ingestion.ingestion_scheduler import (
     IngestionSchedulerFactory,
 )
@@ -19,7 +20,6 @@ from private_gpt.server.utils.http_disconnect import cancel_on_http_disconnect
 
 try:
     from private_gpt.celery.celery import celery_app
-    from private_gpt.celery.model import Task, TaskStatus
 
     _CELERY_AVAILABLE = True
 except ImportError:

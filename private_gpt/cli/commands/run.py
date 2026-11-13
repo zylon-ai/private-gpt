@@ -18,6 +18,15 @@ _APP_BINARIES: dict[str, str] = {
     "opencode": "opencode",
 }
 
+_IS_WINDOWS = os.name == "nt"
+
+# start_new_session is POSIX-only (ignored on Windows); there the child needs
+# its own process group so it survives Ctrl+C in this console.
+_DETACHED_CREATIONFLAGS: int = (
+    getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if _IS_WINDOWS else 0
+)
+
+
 _HEALTH_POLL_INTERVAL = 0.5
 _HEALTH_TIMEOUT = 60.0
 _SERVER_SHUTDOWN_TIMEOUT = 10.0
@@ -73,12 +82,23 @@ def _start_server_subprocess() -> "subprocess.Popen[bytes]":
             stdout=log_fh,
             stderr=log_fh,
             start_new_session=True,
+            creationflags=_DETACHED_CREATIONFLAGS,
         )
     return proc
 
 
 def _stop_server_subprocess(server_proc: "subprocess.Popen[bytes]") -> None:
     if server_proc.poll() is not None:
+        return
+
+    if _IS_WINDOWS:
+        # No process groups / killpg on Windows; terminate the direct child.
+        server_proc.terminate()
+        try:
+            server_proc.wait(timeout=_SERVER_SHUTDOWN_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            server_proc.kill()
+            server_proc.wait()
         return
 
     try:
@@ -343,6 +363,7 @@ def run_command(
                 stdout=log_fh,
                 stderr=log_fh,
                 start_new_session=True,
+                creationflags=_DETACHED_CREATIONFLAGS,
             )
         typer.echo(run_id)
         return
@@ -358,7 +379,16 @@ def run_command(
             _stop_server_subprocess(server_proc)
 
     if use_attach:
-        os.execvp(resolved, cmd)
+        _run_attached(resolved, cmd)
     else:
         result = subprocess.run(cmd, check=False)
         raise SystemExit(result.returncode)
+
+
+def _run_attached(resolved: str, cmd: list[str]) -> None:
+    # Windows has no real exec: os.execvp spawns a child and exits this
+    # process, detaching the app from the console and losing its exit code.
+    if _IS_WINDOWS:
+        result = subprocess.run(cmd, check=False)
+        raise SystemExit(result.returncode)
+    os.execvp(resolved, cmd)

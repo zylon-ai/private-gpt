@@ -1,0 +1,87 @@
+name: "Setup Ollama"
+description: "Install Ollama, start it on 127.0.0.1:11434 and pull the given models"
+inputs:
+  version:
+    description: "Ollama release tag"
+    required: false
+    default: "v0.40.16"
+  models:
+    description: "Space-separated models to pull"
+    required: false
+    default: "qwen3:0.6b all-minilm"
+
+runs:
+  using: composite
+  steps:
+    - name: Set model directory
+      shell: bash
+      run: echo "OLLAMA_MODELS=${RUNNER_TEMP}/ollama-models" >> "$GITHUB_ENV"
+
+    - name: Cache models
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/ollama-models
+        key: ollama-models-${{ runner.os }}-${{ inputs.models }}
+
+    - name: Install Ollama (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        arch=amd64; [ "${{ runner.arch }}" = "ARM64" ] && arch=arm64
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tar.zst" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-linux-${arch}.tar.zst"
+        sudo tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C /usr/local
+        nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tgz" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-darwin.tgz"
+        mkdir -p "$RUNNER_TEMP/ollama"
+        tar xzf "$RUNNER_TEMP/ollama.tgz" -C "$RUNNER_TEMP/ollama"
+        echo "$RUNNER_TEMP/ollama" >> "$GITHUB_PATH"
+        nohup "$RUNNER_TEMP/ollama/ollama" serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $zip = Join-Path $env:RUNNER_TEMP "ollama.zip"
+        $dir = Join-Path $env:RUNNER_TEMP "ollama"
+        curl.exe -fsSL --retry 5 --retry-all-errors -o $zip "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-windows-amd64.zip"
+        if ($LASTEXITCODE -ne 0) { throw "Ollama download failed" }
+        Expand-Archive -Path $zip -DestinationPath $dir
+        Add-Content -Path $env:GITHUB_PATH -Value $dir
+        $env:OLLAMA_HOST = "127.0.0.1:11434"
+        Start-Process -FilePath (Join-Path $dir "ollama.exe") -ArgumentList "serve" -WindowStyle Hidden `
+          -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "ollama.log") `
+          -RedirectStandardError (Join-Path $env:RUNNER_TEMP "ollama.err.log")
+
+    - name: Pull models
+      shell: bash
+      run: |
+        for i in $(seq 1 150); do
+          curl -sf http://127.0.0.1:11434/api/version >/dev/null && break
+          sleep 2
+        done
+        if ! curl -sf http://127.0.0.1:11434/api/version; then
+          cat "$RUNNER_TEMP"/ollama*.log || true
+          exit 1
+        fi
+        echo
+        for model in ${{ inputs.models }}; do
+          for attempt in 1 2 3; do
+            curl -sSf --max-time 900 http://127.0.0.1:11434/api/pull \
+              -d "{\"model\": \"$model\", \"stream\": false}" && break
+            echo "pull $model failed (attempt $attempt)"; sleep 10
+          done
+          echo
+        done
+        curl -sSf http://127.0.0.1:11434/v1/models
+
+    - name: Ollama logs
+      if: failure()
+      shell: bash
+      run: cat "$RUNNER_TEMP"/ollama*.log || true
