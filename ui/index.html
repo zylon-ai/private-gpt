@@ -5111,19 +5111,22 @@
         files.forEach(f => {
           const row = document.createElement("div");
           row.className = "source-row";
-          const isGenerated = f.downloadable;
           const sizeLabel = f.size_bytes < 1024 ? `${f.size_bytes} B` : f.size_bytes < 1048576 ? `${(f.size_bytes / 1024).toFixed(1)} KB` : `${(f.size_bytes / 1048576).toFixed(1)} MB`;
           const downloadUrl = sessionFileUrl(f.id, chat.id);
           const pathLabel = filePathFromId(f.id, f.id || f.filename || "");
+          // Origin comes from the mount path; `downloadable` is not an origin flag
+          // (local namespaces report every file as downloadable).
+          const origin = pathLabel.startsWith("/mnt/user-data/uploads/") ? " · uploaded"
+            : pathLabel.startsWith("/mnt/user-data/outputs/") ? " · generated" : "";
           row.innerHTML = `
             <span class="source-icon">${icons.file}</span>
             <span class="source-main">
               <span class="source-title">${escapeHtml(f.filename)}</span>
-              <span class="source-meta">${escapeHtml(f.mime_type)} · ${sizeLabel}${isGenerated ? " · generated" : " · uploaded"} · ${escapeHtml(pathLabel)}</span>
+              <span class="source-meta">${escapeHtml(f.mime_type)} · ${sizeLabel}${origin} · ${escapeHtml(pathLabel)}</span>
             </span>
             <span class="source-actions">
               <a class="mini-button" href="${escapeAttr(downloadUrl)}" download="${escapeAttr(f.filename)}" target="_blank" title="Download">${icons.download}</a>
-              ${!isGenerated ? `<span class="mini-button" data-delete-session-file="${escapeAttr(f.id)}" title="Delete">${icons.trash}</span>` : ""}
+              <span class="mini-button" data-delete-session-file="${escapeAttr(f.id)}" title="Delete">${icons.trash}</span>
             </span>`;
           list.appendChild(row);
         });
