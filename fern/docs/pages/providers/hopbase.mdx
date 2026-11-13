@@ -1,0 +1,154 @@
+---
+title: "HopBase"
+description: "Configure PrivateGPT with HopBase for GPT, Claude, Gemini, DeepSeek, GLM, Kimi and Qwen chat models through one OpenAI-compatible base URL, with a separate embeddings server."
+---
+
+[HopBase](https://hop-base.com) is a hosted AI API gateway with an OpenAI-compatible endpoint at `https://api.hop-base.com/v1`. It serves chat models from OpenAI, Anthropic, Google and xAI alongside DeepSeek, Zhipu GLM, Moonshot Kimi and Alibaba Qwen, so you can switch the model PrivateGPT answers with by changing a model ID. PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+HopBase serves chat models and does not serve embedding models. This setup sends chat requests to HopBase and keeps embeddings on your own embeddings server, for example a local [Ollama](/providers/ollama) instance.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ returns only the models your key can call |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ❌ use a separate embeddings server |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+Tool calling and streaming were checked against the live API with `gpt-6.1-sol` and `glm-5.3`. JSON-schema output follows the schema on `gpt-6.1-sol`; `glm-5.3` accepts the parameter but does not reliably follow the schema, so validate its output. Image input was checked with `gpt-6.1-sol`; `glm-5.3` rejects images.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and pick a chat model">
+    1. Sign in to the [HopBase console](https://api.hop-base.com/login) and create an API key. A key can call the models of the groups it includes.
+    2. Set `HOPBASE_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export HOPBASE_API_KEY="your-hopbase-api-key"
+    ```
+
+    3. List the model IDs your key can call and use one of them unchanged:
+
+    ```bash
+    curl https://api.hop-base.com/v1/models \
+      -H "Authorization: Bearer $HOPBASE_API_KEY"
+    ```
+
+    Model IDs, context windows and parameters are documented in the [HopBase docs](https://hop-base.com/en/docs), and per-model prices are on the [pricing page](https://hop-base.com/pricing).
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Skip this step if you already have an embeddings server. Otherwise, start Ollama and pull an embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    The examples below use Ollama's OpenAI-compatible API at `http://localhost:11434/v1` with the placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.hop-base.com/v1 \
+          OPENAI_API_KEY="$HOPBASE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=glm-5.3 \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.hop-base.com/v1 \
+          -e OPENAI_API_KEY="$HOPBASE_API_KEY" \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT=glm-5.3 \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.hop-base.com/v1 \
+          OPENAI_API_KEY="$HOPBASE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=glm-5.3 \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+`/v1/models` returns model IDs without a context length and there is no `/tokenize` endpoint, so set `context_window` explicitly. The values below are the documented context windows of each model.
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: glm-5.3
+
+models:
+  - name: glm-5.3
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+
+  - name: gpt-6.1-sol
+    type: llm
+    mode: openai
+    context_window: 1050000
+    support_tools: true
+    support_reasoning: true
+
+  - name: claude-sonnet-5-5
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+```
+
+Run with the profile:
+
+```bash
+OPENAI_API_BASE=https://api.hop-base.com/v1 \
+  OPENAI_API_KEY="$HOPBASE_API_KEY" \
+  OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+  OPENAI_EMBEDDING_API_KEY=ollama \
+  PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## Notes
+
+- **Model IDs** come from `/v1/models` for your key. If a model is missing from the list, the key's groups do not include it.
+- **Regional variants** of some models (for example DeepSeek in Singapore or the US) have their own model IDs; pick the one you want explicitly.
+- **Embeddings stay on your server**, but retrieved document excerpts that PrivateGPT puts into a chat prompt are sent to the hosted API.
+- HopBase also exposes an Anthropic Messages-compatible endpoint. PrivateGPT uses the OpenAI-compatible one, and Claude models are available on it too.
