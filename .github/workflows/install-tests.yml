@@ -264,17 +264,17 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Free disk space
-        uses: jlumbroso/free-disk-space@ceedf095f4ec1a097402bc6bd80831f2e1a6fde6 # v2.0.0
-        with:
-          tool-cache: false
-          docker-images: false
-
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - uses: ./.github/workflows/actions/setup_ollama
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@ceedf095f4ec1a097402bc6bd80831f2e1a6fde6 # v2.0.0
+        with:
+          tool-cache: false
+          docker-images: false
 
       - name: Build image
         run: docker build --build-arg EXTRAS="$EXTRA" -t private-gpt:ci .

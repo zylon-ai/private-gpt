@@ -40,7 +40,7 @@ def render_formula(
     assert_match "private-gpt[{extra}]=={version}", script
     assert_match "{package_files_url}", script
     assert_match "{constraints_url}", script
-    assert_match Formula["uv"].opt_bin.realpath.to_s, script
+    assert_match Formula["uv"].opt_bin.to_s, script
   end
 end
 """

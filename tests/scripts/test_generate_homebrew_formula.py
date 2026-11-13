@@ -30,3 +30,11 @@ def test_formula_pins_package_version_and_python() -> None:
 
 def test_formula_pins_dependencies_to_release_lock() -> None:
     assert f'--constraints "{CONSTRAINTS}"' in _formula()
+
+
+def test_formula_test_block_matches_installed_wrapper_paths() -> None:
+    # The wrapper is written with opt_bin (the stable symlink); asserting
+    # opt_bin.realpath (the versioned Cellar path) can never match it.
+    formula = _formula()
+    assert "opt_bin.realpath" not in formula
+    assert 'assert_match Formula["uv"].opt_bin.to_s, script' in formula

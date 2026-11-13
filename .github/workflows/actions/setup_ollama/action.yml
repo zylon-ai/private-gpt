@@ -28,7 +28,7 @@ runs:
       shell: bash
       run: |
         arch=amd64; [ "${{ runner.arch }}" = "ARM64" ] && arch=arm64
-        curl -fsSL -o "$RUNNER_TEMP/ollama.tar.zst" \
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tar.zst" \
           "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-linux-${arch}.tar.zst"
         sudo tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C /usr/local
         nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
@@ -37,7 +37,7 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        curl -fsSL -o "$RUNNER_TEMP/ollama.tgz" \
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tgz" \
           "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-darwin.tgz"
         mkdir -p "$RUNNER_TEMP/ollama"
         tar xzf "$RUNNER_TEMP/ollama.tgz" -C "$RUNNER_TEMP/ollama"
@@ -50,9 +50,11 @@ runs:
       run: |
         $zip = Join-Path $env:RUNNER_TEMP "ollama.zip"
         $dir = Join-Path $env:RUNNER_TEMP "ollama"
-        Invoke-WebRequest -Uri "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-windows-amd64.zip" -OutFile $zip
+        curl.exe -fsSL --retry 5 --retry-all-errors -o $zip "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-windows-amd64.zip"
+        if ($LASTEXITCODE -ne 0) { throw "Ollama download failed" }
         Expand-Archive -Path $zip -DestinationPath $dir
         Add-Content -Path $env:GITHUB_PATH -Value $dir
+        $env:OLLAMA_HOST = "127.0.0.1:11434"
         Start-Process -FilePath (Join-Path $dir "ollama.exe") -ArgumentList "serve" -WindowStyle Hidden `
           -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "ollama.log") `
           -RedirectStandardError (Join-Path $env:RUNNER_TEMP "ollama.err.log")
@@ -60,13 +62,26 @@ runs:
     - name: Pull models
       shell: bash
       run: |
-        for i in $(seq 1 60); do
+        for i in $(seq 1 150); do
           curl -sf http://127.0.0.1:11434/api/version >/dev/null && break
           sleep 2
         done
-        curl -sf http://127.0.0.1:11434/api/version
+        if ! curl -sf http://127.0.0.1:11434/api/version; then
+          cat "$RUNNER_TEMP"/ollama*.log || true
+          exit 1
+        fi
+        echo
         for model in ${{ inputs.models }}; do
-          curl -sf http://127.0.0.1:11434/api/pull -d "{\"model\": \"$model\", \"stream\": false}"
+          for attempt in 1 2 3; do
+            curl -sSf --max-time 900 http://127.0.0.1:11434/api/pull \
+              -d "{\"model\": \"$model\", \"stream\": false}" && break
+            echo "pull $model failed (attempt $attempt)"; sleep 10
+          done
           echo
         done
-        curl -sf http://127.0.0.1:11434/v1/models
+        curl -sSf http://127.0.0.1:11434/v1/models
+
+    - name: Ollama logs
+      if: failure()
+      shell: bash
+      run: cat "$RUNNER_TEMP"/ollama*.log || true
