@@ -88,7 +88,7 @@ Add feature-specific extras only when you need them, for example `uv sync --froz
       <Step title="Run">
         ```powershell
         $env:OPENAI_API_BASE = "http://localhost:11434/v1"
-        uv run python -m private_gpt
+        uv run private-gpt serve
         ```
         Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
       </Step>
@@ -109,7 +109,7 @@ Add feature-specific extras only when you need them, for example `uv sync --froz
       <Step title="Run">
         ```cmd
         set OPENAI_API_BASE=http://localhost:11434/v1
-        uv run python -m private_gpt
+        uv run private-gpt serve
         ```
         Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
       </Step>

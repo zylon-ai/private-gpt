@@ -9,18 +9,36 @@ Documents are ingested through `/v1/artifacts/ingest`. Once ingested they are ch
 
 ## Ingest a file
 
-```bash
-curl -X POST http://localhost:8080/v1/artifacts/ingest \
-  -F "file=@/path/to/document.pdf"
-```
+The endpoint takes JSON. Send the file as base64, and give it an `artifact` ID and a `collection`:
 
-Target a specific collection:
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    curl -X POST http://localhost:8080/v1/artifacts/ingest \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"artifact\": \"quarterly-report\",
+        \"collection\": \"my-collection\",
+        \"input\": {\"type\": \"file\", \"value\": \"$(base64 < /path/to/document.pdf | tr -d '\\n')\"},
+        \"metadata\": {\"file_name\": \"document.pdf\"}
+      }"
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $body = @{
+      artifact   = "quarterly-report"
+      collection = "my-collection"
+      input      = @{ type = "file"; value = [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\document.pdf")) }
+      metadata   = @{ file_name = "document.pdf" }
+    } | ConvertTo-Json
+    Invoke-RestMethod -Method Post -Uri http://localhost:8080/v1/artifacts/ingest `
+      -ContentType "application/json" -Body $body
+    ```
+  </Tab>
+</Tabs>
 
-```bash
-curl -X POST http://localhost:8080/v1/artifacts/ingest \
-  -F "file=@/path/to/document.pdf" \
-  -F "collection=my-collection"
-```
+Plain text can be sent directly with `"input": {"type": "text", "value": "..."}`.
 
 ---
 

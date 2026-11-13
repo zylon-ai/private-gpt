@@ -1,15 +1,28 @@
 ARG EXTRAS="core"
 ARG PLAYWRIGHT_VERSION="1.60.0"
 
-FROM python:3.11.10-slim-bookworm AS base
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Bump the tag and digest together.
+FROM ghcr.io/astral-sh/uv:0.11.25@sha256:1e3808aa9023d0980e7c15b1fa7c1ac16ff35925780cf5c459858b2d693f01a9 AS uv-bin
+
+FROM python:3.11.10-slim-bookworm@sha256:840e180ebcc6e5c8efab209c43f5e40fd2af98cb49db5c7103c90539c56bb30e AS base
+COPY --from=uv-bin /uv /usr/local/bin/uv
 ENV PATH="/usr/local/bin:${PATH}"
 ENV UV_LINK_MODE=copy \
     UV_CACHE_DIR=/root/.cache/uv
 
 FROM base AS os-deps
 ARG EXTRAS
+# snapshot.debian.org timestamp, e.g. 20261113T000000Z. Empty uses the live archive.
+ARG DEBIAN_SNAPSHOT=""
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
+RUN set -eu; \
+    if [ -n "$DEBIAN_SNAPSHOT" ]; then \
+      sed -i \
+        -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}|" \
+        -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}|" \
+        /etc/apt/sources.list.d/debian.sources; \
+      echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99snapshot; \
+    fi
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     set -eu; \

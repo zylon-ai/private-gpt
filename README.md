@@ -78,6 +78,8 @@ uv tool install --python 3.11 `
   "private-gpt[core]"
 ```
 
+> To install with the exact dependency versions a release was tested with, or fully offline, see [Reproducible install](https://docs.privategpt.dev/installation/package#reproducible-install-pinned-dependencies).
+
 **2. Start your LLM server**
 
 ```bash

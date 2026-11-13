@@ -7,11 +7,9 @@ from asyncio import CancelledError, to_thread
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
 
 from private_gpt.celery.dispatch import dispatch_task
-from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.tools.remote_execution import (
     build_error_response,
     execute_tool_request,
@@ -142,6 +140,10 @@ class CeleryToolScheduler(BaseToolScheduler):
         state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
+        from celery.exceptions import TimeoutError as CeleryTimeoutError
+
+        from private_gpt.celery.result import wait_for_celery_result
+
         request = request.model_copy(
             update={"interceptor_paths": tool_execution_interceptor_paths(interceptors)}
         )

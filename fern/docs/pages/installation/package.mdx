@@ -48,9 +48,73 @@ This is the recommended installation method for developers who want to run Priva
   </Tab>
 </Tabs>
 
+## Reproducible install (pinned dependencies)
+
+The commands above install the newest compatible version of each dependency. To install exactly the dependency versions a release was tested with (the Homebrew formula already does this), add that release's constraints file:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    VERSION=1.1.0
+    uv tool install --python 3.11 \
+      --find-links https://wheels.privategpt.dev/packages/ \
+      --constraints "https://wheels.privategpt.dev/constraints/private-gpt-${VERSION}-constraints.txt" \
+      "private-gpt[core]==${VERSION}"
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $VERSION = "1.1.0"
+    uv tool install --python 3.11 `
+      --find-links https://wheels.privategpt.dev/packages/ `
+      --constraints "https://wheels.privategpt.dev/constraints/private-gpt-$VERSION-constraints.txt" `
+      "private-gpt[core]==$VERSION"
+    ```
+  </Tab>
+</Tabs>
+
+### Offline bundle
+
+Each [GitHub release](https://github.com/zylon-ai/private-gpt/releases) includes a `private-gpt-<version>-core-<platform>` archive for Linux x86_64 and arm64, macOS arm64, and Windows x86_64. It contains every pinned wheel, so the install needs no network access and does not depend on PyPI staying available. Only Python 3.11 is required:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    tar xzf private-gpt-1.1.0-core-linux-x86_64.tar.gz
+    cd private-gpt-1.1.0-core-linux-x86_64
+    python3.11 -m venv ~/private-gpt-venv
+    ~/private-gpt-venv/bin/pip install --no-index --find-links wheelhouse \
+      --require-hashes -r requirements.txt
+    ~/private-gpt-venv/bin/private-gpt serve
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    Expand-Archive private-gpt-1.1.0-core-windows-amd64.zip .
+    cd private-gpt-1.1.0-core-windows-amd64
+    py -3.11 -m venv $HOME\private-gpt-venv
+    & $HOME\private-gpt-venv\Scripts\pip.exe install --no-index --find-links wheelhouse `
+      --require-hashes -r requirements.txt
+    & $HOME\private-gpt-venv\Scripts\private-gpt.exe serve
+    ```
+  </Tab>
+</Tabs>
+
+`--require-hashes` checks every file against the SHA-256 recorded at release time.
+
 <Note>
-  **Python 3.11 is required.** PrivateGPT does not support Python 3.10 or 3.12+.
+  **Python 3.11 is required.** PrivateGPT does not support Python 3.10 or 3.12+. With `uv`, `--python 3.11` downloads a managed interpreter if none is installed.
 </Note>
+
+## System dependencies
+
+PrivateGPT starts without any of these, but some document features need native tools. The Docker image and the Homebrew formula already include `libmagic`.
+
+| Tool | Used for | macOS | Debian / Ubuntu | Windows |
+|---|---|---|---|---|
+| `libmagic` | Detecting file types from content | `brew install libmagic` | `sudo apt install libmagic1` | Not available; PrivateGPT falls back to file extensions |
+| LibreOffice | Converting `.doc`, `.ppt`, `.xls` files | `brew install --cask libreoffice` | `sudo apt install libreoffice` | [Installer](https://www.libreoffice.org/download/), with `soffice` on `PATH` |
+| Ghostscript | Rendering slides to images | `brew install ghostscript` | `sudo apt install ghostscript` | [Installer](https://ghostscript.com/releases/), with `gs` on `PATH` |
 
 ## Verify
 
