@@ -58,6 +58,9 @@ class DefaultValuesRequestInterceptor(ChatRequestLoopInterceptor):
             request.context.deduplicate_context_in_history
             or self._settings.chat.deduplicate_context_in_history
         )
+        request.context.deduplicate_context_keep = (
+            self._settings.chat.deduplicate_context_keep
+        )
         request.context.maximum_context_length = (
             request.context.maximum_context_length
             or self._settings.chat.maximum_context_length
