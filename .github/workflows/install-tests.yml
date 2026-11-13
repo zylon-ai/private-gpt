@@ -1,0 +1,290 @@
+name: install-tests
+
+on:
+  pull_request:
+    paths:
+      - 'private_gpt/**'
+      - 'scripts/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Dockerfile'
+      - 'settings.yaml'
+      - '.github/workflows/install-tests.yml'
+      - '.github/workflows/generate-release.yml'
+      - '.github/workflows/actions/setup_ollama/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXTRA: core
+  MODEL: qwen3:0.6b
+  OPENAI_API_BASE: http://127.0.0.1:11434/v1
+  PYTHONUTF8: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.11"
+
+      - id: version
+        run: echo "version=$(cat version.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Build package and constraints
+        run: |
+          uv build
+          uv export --frozen --all-extras --no-dev --no-emit-project \
+            --no-hashes --no-header --no-annotate --format requirements.txt \
+            -o "dist/private-gpt-${{ steps.version.outputs.version }}-constraints.txt"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  package:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.11"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Install native libmagic (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y --no-install-recommends libmagic1
+
+      - name: Install native libmagic (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libmagic
+
+      - uses: ./.github/workflows/actions/setup_ollama
+
+      - name: Build offline bundle
+        run: |
+          uv run --no-project --python 3.11 --with pip \
+            python scripts/build_wheelhouse.py \
+            --project-wheel "dist/private_gpt-${{ needs.build.outputs.version }}-py3-none-any.whl" \
+            --extra "$EXTRA" --out-dir bundles
+          ls -la bundles
+
+      - name: Extract bundle
+        id: bundle
+        run: |
+          mkdir -p "$RUNNER_TEMP/bundle"
+          for f in bundles/*; do
+            case "$f" in
+              *.zip) unzip -q "$f" -d "$RUNNER_TEMP/bundle" ;;
+              *) tar xzf "$f" -C "$RUNNER_TEMP/bundle" ;;
+            esac
+          done
+          echo "dir=$(ls -d "$RUNNER_TEMP"/bundle/private-gpt-*)" >> "$GITHUB_OUTPUT"
+
+      - name: Offline bundle via pip
+        run: |
+          "$(uv python find 3.11)" -m venv "$RUNNER_TEMP/pipvenv"
+          bin="$RUNNER_TEMP/pipvenv/bin"; [ "$RUNNER_OS" = "Windows" ] && bin="$RUNNER_TEMP/pipvenv/Scripts"
+          cd "${{ steps.bundle.outputs.dir }}"
+          "$bin/python" -m pip install --no-index --find-links wheelhouse \
+            --require-hashes --no-compile -r requirements.txt
+          echo "PIP_BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Smoke test offline bundle via pip
+        run: |
+          PGPT_HOME="$RUNNER_TEMP/home-pip" "$PIP_BIN/private-gpt" serve --port 18501 \
+            > "$RUNNER_TEMP/serve-pip.log" 2>&1 &
+          python scripts/install_smoke_test.py --base-url http://127.0.0.1:18501 --model "$MODEL"
+
+      - name: Offline bundle via uv
+        run: |
+          cd "${{ steps.bundle.outputs.dir }}"
+          UV_TOOL_DIR="$RUNNER_TEMP/tools-offline" UV_TOOL_BIN_DIR="$RUNNER_TEMP/bin-offline" \
+            uv tool install --offline --no-index --find-links wheelhouse --python 3.11 \
+            "private-gpt[$EXTRA]==${{ needs.build.outputs.version }}"
+
+      - name: Smoke test offline bundle via uv
+        run: |
+          PGPT_HOME="$RUNNER_TEMP/home-uv-offline" "$RUNNER_TEMP/bin-offline/private-gpt" serve --port 18502 \
+            > "$RUNNER_TEMP/serve-uv-offline.log" 2>&1 &
+          python scripts/install_smoke_test.py --base-url http://127.0.0.1:18502 --model "$MODEL"
+
+      - name: uv tool install with constraints
+        run: |
+          UV_TOOL_DIR="$RUNNER_TEMP/tools-online" UV_TOOL_BIN_DIR="$RUNNER_TEMP/bin-online" \
+            uv tool install --python 3.11 --find-links dist \
+            --constraints "dist/private-gpt-${{ needs.build.outputs.version }}-constraints.txt" \
+            "private-gpt[$EXTRA]==${{ needs.build.outputs.version }}"
+
+      - name: Installed packages match the lock
+        run: |
+          online="$RUNNER_TEMP/tools-online/private-gpt"
+          offline="$RUNNER_TEMP/tools-offline/private-gpt"
+          py() { if [ -x "$1/bin/python" ]; then echo "$1/bin/python"; else echo "$1/Scripts/python.exe"; fi; }
+          diff <(uv pip freeze --python "$(py "$online")" | sort) \
+               <(uv pip freeze --python "$(py "$offline")" | sort)
+
+      - name: Smoke test uv tool install
+        run: |
+          PGPT_HOME="$RUNNER_TEMP/home-uv-online" "$RUNNER_TEMP/bin-online/private-gpt" serve --port 18503 \
+            > "$RUNNER_TEMP/serve-uv-online.log" 2>&1 &
+          python scripts/install_smoke_test.py --base-url http://127.0.0.1:18503 --model "$MODEL"
+
+      - name: Server logs
+        if: always()
+        run: |
+          for f in "$RUNNER_TEMP"/serve-*.log "$RUNNER_TEMP"/ollama*.log; do
+            [ -f "$f" ] || continue
+            echo "::group::$f"; tail -n 200 "$f"; echo "::endgroup::"
+          done
+
+  source:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.11"
+
+      - uses: ./.github/workflows/actions/setup_ollama
+
+      - name: uv sync --frozen
+        run: uv sync --frozen --extra "$EXTRA"
+
+      - name: Smoke test
+        run: |
+          PGPT_HOME="$RUNNER_TEMP/home-src" uv run --frozen private-gpt serve --port 18504 \
+            > "$RUNNER_TEMP/serve-src.log" 2>&1 &
+          python scripts/install_smoke_test.py --base-url http://127.0.0.1:18504 --model "$MODEL"
+
+      - name: Server logs
+        if: always()
+        run: tail -n 200 "$RUNNER_TEMP/serve-src.log" || true
+
+  homebrew:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - uses: ./.github/workflows/actions/setup_ollama
+
+      - name: Serve package files
+        run: |
+          mkdir -p "$RUNNER_TEMP/site/constraints"
+          cp dist/*.whl dist/*.tar.gz "$RUNNER_TEMP/site/"
+          cp dist/*-constraints.txt "$RUNNER_TEMP/site/constraints/"
+          nohup python3 -m http.server 18600 --bind 127.0.0.1 --directory "$RUNNER_TEMP/site" \
+            > "$RUNNER_TEMP/http.log" 2>&1 &
+
+      - name: Generate formula into a local tap
+        run: |
+          version="${{ needs.build.outputs.version }}"
+          sdist="dist/private_gpt-${version}.tar.gz"
+          brew tap-new --no-git local/pgpt-ci
+          tap="$(brew --repository)/Library/Taps/local/homebrew-pgpt-ci"
+          python3 scripts/generate_homebrew_formula.py \
+            --version "$version" \
+            --source-url "file://$PWD/$sdist" \
+            --sha256 "$(shasum -a 256 "$sdist" | cut -d' ' -f1)" \
+            --package-files-url "http://127.0.0.1:18600/" \
+            --constraints-url "http://127.0.0.1:18600/constraints/private-gpt-${version}-constraints.txt" \
+            --output "$tap/Formula/private-gpt.rb"
+          cat "$tap/Formula/private-gpt.rb"
+
+      - name: brew install and brew test
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_FROM_API: "1"
+        run: |
+          brew install local/pgpt-ci/private-gpt
+          brew test local/pgpt-ci/private-gpt
+
+      - name: Smoke test
+        run: |
+          PGPT_HOME="$RUNNER_TEMP/home-brew" private-gpt serve --port 18505 \
+            > "$RUNNER_TEMP/serve-brew.log" 2>&1 &
+          python3 scripts/install_smoke_test.py --base-url http://127.0.0.1:18505 --model "$MODEL"
+
+      - name: Server logs
+        if: always()
+        run: tail -n 200 "$RUNNER_TEMP/serve-brew.log" || true
+
+  docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@ceedf095f4ec1a097402bc6bd80831f2e1a6fde6 # v2.0.0
+        with:
+          tool-cache: false
+          docker-images: false
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/workflows/actions/setup_ollama
+
+      - name: Build image
+        run: docker build --build-arg EXTRAS="$EXTRA" -t private-gpt:ci .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name pgpt --network host \
+            -e OPENAI_API_BASE="$OPENAI_API_BASE" -e PORT=18506 private-gpt:ci
+          python3 scripts/install_smoke_test.py --base-url http://127.0.0.1:18506 --model "$MODEL"
+
+      - name: Container logs
+        if: always()
+        run: docker logs pgpt 2>&1 | tail -n 200 || true

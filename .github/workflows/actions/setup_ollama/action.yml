@@ -1,0 +1,72 @@
+name: "Setup Ollama"
+description: "Install Ollama, start it on 127.0.0.1:11434 and pull the given models"
+inputs:
+  version:
+    description: "Ollama release tag"
+    required: false
+    default: "v0.40.16"
+  models:
+    description: "Space-separated models to pull"
+    required: false
+    default: "qwen3:0.6b all-minilm"
+
+runs:
+  using: composite
+  steps:
+    - name: Set model directory
+      shell: bash
+      run: echo "OLLAMA_MODELS=${RUNNER_TEMP}/ollama-models" >> "$GITHUB_ENV"
+
+    - name: Cache models
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/ollama-models
+        key: ollama-models-${{ runner.os }}-${{ inputs.models }}
+
+    - name: Install Ollama (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        arch=amd64; [ "${{ runner.arch }}" = "ARM64" ] && arch=arm64
+        curl -fsSL -o "$RUNNER_TEMP/ollama.tar.zst" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-linux-${arch}.tar.zst"
+        sudo tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C /usr/local
+        nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        curl -fsSL -o "$RUNNER_TEMP/ollama.tgz" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-darwin.tgz"
+        mkdir -p "$RUNNER_TEMP/ollama"
+        tar xzf "$RUNNER_TEMP/ollama.tgz" -C "$RUNNER_TEMP/ollama"
+        echo "$RUNNER_TEMP/ollama" >> "$GITHUB_PATH"
+        nohup "$RUNNER_TEMP/ollama/ollama" serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $zip = Join-Path $env:RUNNER_TEMP "ollama.zip"
+        $dir = Join-Path $env:RUNNER_TEMP "ollama"
+        Invoke-WebRequest -Uri "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-windows-amd64.zip" -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath $dir
+        Add-Content -Path $env:GITHUB_PATH -Value $dir
+        Start-Process -FilePath (Join-Path $dir "ollama.exe") -ArgumentList "serve" -WindowStyle Hidden `
+          -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "ollama.log") `
+          -RedirectStandardError (Join-Path $env:RUNNER_TEMP "ollama.err.log")
+
+    - name: Pull models
+      shell: bash
+      run: |
+        for i in $(seq 1 60); do
+          curl -sf http://127.0.0.1:11434/api/version >/dev/null && break
+          sleep 2
+        done
+        curl -sf http://127.0.0.1:11434/api/version
+        for model in ${{ inputs.models }}; do
+          curl -sf http://127.0.0.1:11434/api/pull -d "{\"model\": \"$model\", \"stream\": false}"
+          echo
+        done
+        curl -sf http://127.0.0.1:11434/v1/models

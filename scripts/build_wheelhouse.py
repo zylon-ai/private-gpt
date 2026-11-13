@@ -195,7 +195,7 @@ wheelhouse/. Installing needs Python 3.11 and no network access.
 With pip (verifies every file against requirements.txt):
   python3.11 -m venv private-gpt-venv
   private-gpt-venv/bin/pip install --no-index --find-links wheelhouse \\
-    --require-hashes -r requirements.txt
+    --require-hashes --no-compile -r requirements.txt
   (Windows: private-gpt-venv\\Scripts\\pip.exe ...)
   Then run:  private-gpt-venv/bin/private-gpt serve
 

@@ -84,7 +84,7 @@ Each [GitHub release](https://github.com/zylon-ai/private-gpt/releases) includes
     cd private-gpt-1.1.0-core-linux-x86_64
     python3.11 -m venv ~/private-gpt-venv
     ~/private-gpt-venv/bin/pip install --no-index --find-links wheelhouse \
-      --require-hashes -r requirements.txt
+      --require-hashes --no-compile -r requirements.txt
     ~/private-gpt-venv/bin/private-gpt serve
     ```
   </Tab>
@@ -94,13 +94,13 @@ Each [GitHub release](https://github.com/zylon-ai/private-gpt/releases) includes
     cd private-gpt-1.1.0-core-windows-amd64
     py -3.11 -m venv $HOME\private-gpt-venv
     & $HOME\private-gpt-venv\Scripts\pip.exe install --no-index --find-links wheelhouse `
-      --require-hashes -r requirements.txt
+      --require-hashes --no-compile -r requirements.txt
     & $HOME\private-gpt-venv\Scripts\private-gpt.exe serve
     ```
   </Tab>
 </Tabs>
 
-`--require-hashes` checks every file against the SHA-256 recorded at release time.
+`--require-hashes` checks every file against the SHA-256 recorded at release time. `--no-compile` skips precompiling the bundled SQL parser tables, which otherwise needs about 5 GB of memory during the install.
 
 <Note>
   **Python 3.11 is required.** PrivateGPT does not support Python 3.10 or 3.12+. With `uv`, `--python 3.11` downloads a managed interpreter if none is installed.
