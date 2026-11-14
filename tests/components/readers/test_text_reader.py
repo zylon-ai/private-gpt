@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -254,6 +255,18 @@ def test_single_column_csv_is_not_split_on_a_letter(
 
     for row in rows:
         assert row in lines
+
+
+def test_utf8_csv_is_read_as_utf8_whatever_the_locale(
+    tmp_path: Path, locale_encoding: Callable[[str], None]
+) -> None:
+    # The code page of Japanese Windows.
+    locale_encoding("cp932")
+
+    markdown_content = _csv_markdown(tmp_path, "氏名,住所\n山田太郎,東京都千代田区\n")
+
+    assert "| 氏名 | 住所 |" in markdown_content
+    assert "| 山田太郎 | 東京都千代田区 |" in markdown_content
 
 
 def test_eml() -> None:

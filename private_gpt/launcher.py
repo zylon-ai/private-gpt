@@ -257,7 +257,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         server_url = f"http://{connect_host}:{settings.server.port}"
         if settings.server.root_path:
             server_url += "/" + settings.server.root_path.strip("/")
-        _index_html = (UI_DIRECTORY / "index.html").read_text()
+        _index_html = (UI_DIRECTORY / "index.html").read_text(encoding="utf-8")
         _index_html = _index_html.replace(
             'const DEFAULT_BASE_URL = window.location.origin === "null" ? "http://127.0.0.1:8080" : window.location.origin;',
             f'const DEFAULT_BASE_URL = "{server_url}";',

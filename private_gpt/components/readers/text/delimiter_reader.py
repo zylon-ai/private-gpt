@@ -20,18 +20,19 @@ class DelimiterTextReader(TextReader):
         super().__init__()
 
     def _detect_delimiter_and_header(
-        self, file_path: Path, sample_size: int = 4096
+        self, file_path: Path, encoding: str = "utf-8", sample_size: int = 4096
     ) -> tuple[str | None, bool | None]:
         """Detect the delimiter of a file by analyzing a sample.
 
         Args:
             file_path: Path to the delimited file
+            encoding: Encoding to read the sample with
             sample_size: Number of bytes to sample for detection
 
         Returns:
             str: Detected delimiter
         """
-        with open(file_path) as file:
+        with open(file_path, encoding=encoding) as file:
             sample = file.read(sample_size)
 
         sniffer = csv.Sniffer()
@@ -48,7 +49,8 @@ class DelimiterTextReader(TextReader):
         encoding: str | None = None,
         extra_info: dict[str, Any] | None = None,
     ) -> Iterator[BaseNode]:
-        delimiter, _ = self._detect_delimiter_and_header(file_path)
+        encoding = encoding or "utf-8"
+        delimiter, _ = self._detect_delimiter_and_header(file_path, encoding)
 
         chunksize = 100
         markdown_lines = []
@@ -67,7 +69,7 @@ class DelimiterTextReader(TextReader):
                 # No detected separator means one column. sep=None would make
                 # pandas sniff again, without the restriction above.
                 sep=delimiter or ",",
-                encoding=encoding or "utf-8",
+                encoding=encoding,
                 on_bad_lines="warn",
                 chunksize=chunksize,
                 dtype=str,
