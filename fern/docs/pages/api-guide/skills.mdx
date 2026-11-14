@@ -7,6 +7,8 @@ A skill is a packaged set of instructions — defined by a `SKILL.md` file — t
 
 Skills are versioned. You can update a skill without breaking existing integrations that pin to an older version.
 
+Creating a skill or adding a version returns HTTP 400 for invalid skill files, with the validation reason in `error.message`. Correct the reported issue in the bundle and upload it again. Bundles exceeding `skills.max_bundle_size_bytes` return HTTP 413; reduce the bundle size before retrying. The validation endpoint continues to return HTTP 200 with `valid: false` and structured `errors` for invalid bundles.
+
 ---
 
 ## Create a skill

@@ -71,7 +71,9 @@ class ErrorBlock(BaseContentBlock, StandardContentProtocol):
 
         return cls(
             type=wrapped_exception.error_type,
-            message=wrapped_exception.error_type.replace("_", " ").title(),
+            message=explanation
+            if wrapped_exception.status_code < 500 and isinstance(explanation, str)
+            else wrapped_exception.error_type.replace("_", " ").title(),
             detail=ErrorDetail(
                 code=wrapped_exception.event_code,
                 explanation=explanation,
