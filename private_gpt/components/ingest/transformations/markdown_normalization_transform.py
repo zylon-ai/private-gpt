@@ -9,7 +9,10 @@ class MarkdownNormalizer:
     def __init__(self, target_indent: int = 2) -> None:
         self.target_indent = target_indent
         self.PATTERNS = {
-            "list": r"^(\s*)([\*\-\+]|\d+\.)\s*(.*)$",
+            # A list marker has to be followed by whitespace (or end the line),
+            # otherwise "1.5 million", "-5 degrees", "*Note:*" and "---" would
+            # be rewritten as list items.
+            "list": r"^(\s*)([\*\-\+]|\d+\.)(?:\s+|$)(.*)$",
             "table": r"^\s*\|.*\|\s*$",
             "heading": r"^\s*(#{1,6})\s*(.*)$",
             "bold": r"^\*\*(.*)\*\*$",
