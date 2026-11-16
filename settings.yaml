@@ -347,6 +347,12 @@ brave:
   api_key: ${PGPT_BRAVE_API_KEY:}
   rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
 
+specstream:
+  api_key: ${PGPT_SPECSTREAM_API_KEY:}
+  speed: ${PGPT_SPECSTREAM_SPEED:fast}
+  rate_limit: ${PGPT_SPECSTREAM_RATE_LIMIT:1}
+  timeout: ${PGPT_SPECSTREAM_TIMEOUT:30}
+
 skills:
   database: ${PGPT_SKILLS_DATABASE:sqlite}
   storage_provider: ${PGPT_SKILLS_STORAGE_PROVIDER:local}

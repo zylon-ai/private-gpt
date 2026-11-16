@@ -124,6 +124,12 @@ class WebSearchService:
             )
 
             self._provider = BraveSearchProvider(self._settings)
+        elif self._settings.web_search.provider == "specstream":
+            from private_gpt.components.web.web_search.providers.specstream import (
+                SpecStreamSearchProvider,
+            )
+
+            self._provider = SpecStreamSearchProvider(self._settings)
         elif self._settings.web_search.provider == "mock":
             from private_gpt.components.web.web_search.providers.mock import (
                 MockSearchProvider,
