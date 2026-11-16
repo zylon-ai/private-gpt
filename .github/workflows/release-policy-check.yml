@@ -1,0 +1,19 @@
+name: Release policy
+on:
+  pull_request:
+    branches: ["main", 'release/**']
+permissions:
+  contents: read
+jobs:
+  release-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate release configuration and maintenance version range
+        env:
+          TARGET_BRANCH: ${{ github.base_ref }}
+        run: python3 .github/scripts/release_policy.py validate --branch "$TARGET_BRANCH"
+      - name: Test policy and real-git forward-port behavior
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'

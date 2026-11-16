@@ -4,18 +4,29 @@ on:
   push:
     branches:
       - main
+      - 'release/**'
 
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate release-line ownership
+        run: python3 .github/scripts/release_policy.py validate
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          config-file: .github/release_please/.release-please-config.json
-          manifest-file: .github/release_please/.release-please-manifest.json
           token: ${{ secrets.PAT }}
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ startsWith(github.ref_name, 'release/') && '.github/release_please/release-please-maintenance.json' || '.github/release_please/.release-please-config.json' }}
+          manifest-file: .github/release_please/.release-please-manifest.json
