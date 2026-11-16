@@ -191,6 +191,17 @@ jobs:
       - name: uv sync --frozen
         run: uv sync --frozen --extra "$EXTRA"
 
+      - name: Diagnose libmagic (Windows)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: |
+          uv run --frozen python -c "import ctypes.util as u; [print(n, u.find_library(n)) for n in ('magic','libmagic','magic1','libmagic-1','msys-magic-1','cygmagic-1')]"
+          set +e
+          uv run --frozen python -c "import magic; print(magic.from_buffer(b'hello world', mime=True))"
+          echo "import magic exit=$?"
+          PATH="$(echo "$PATH" | tr ':' '\n' | grep -vi '/usr/bin' | paste -sd:)" uv run --frozen python -c "import magic; print(magic.from_buffer(b'hello world', mime=True))"
+          echo "without Git usr/bin exit=$?"
+
       - name: Smoke test
         run: |
           PGPT_HOME="$RUNNER_TEMP/home-src" uv run --frozen private-gpt serve --port 18504 \
