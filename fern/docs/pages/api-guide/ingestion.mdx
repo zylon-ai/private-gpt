@@ -14,14 +14,14 @@ The endpoint takes JSON. Send the file as base64, and give it an `artifact` ID a
 <Tabs>
   <Tab title="macOS / Linux">
     ```bash
-    curl -X POST http://localhost:8080/v1/artifacts/ingest \
+    {
+      printf '{"artifact": "quarterly-report", "collection": "my-collection", '
+      printf '"metadata": {"file_name": "document.pdf"}, "input": {"type": "file", "value": "'
+      base64 < /path/to/document.pdf | tr -d '\n'
+      printf '"}}'
+    } | curl -X POST http://localhost:8080/v1/artifacts/ingest \
       -H "Content-Type: application/json" \
-      -d "{
-        \"artifact\": \"quarterly-report\",
-        \"collection\": \"my-collection\",
-        \"input\": {\"type\": \"file\", \"value\": \"$(base64 < /path/to/document.pdf | tr -d '\\n')\"},
-        \"metadata\": {\"file_name\": \"document.pdf\"}
-      }"
+      --data-binary @-
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">

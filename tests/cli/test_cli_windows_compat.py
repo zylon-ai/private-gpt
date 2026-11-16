@@ -85,3 +85,44 @@ def test_run_attach_on_windows_does_not_exec(
     assert exc.value.code == 0
     execvp.assert_not_called()
     run.assert_called_once_with(["claude", "--x"], check=False)
+
+
+def test_start_server_on_windows_runs_python_directly(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The private-gpt.exe console-script launcher spawns a second Python
+    # process; terminating the launcher would leave that server running.
+    monkeypatch.setattr(run_cmd, "_IS_WINDOWS", True)
+    monkeypatch.setattr(run_cmd.shutil, "which", lambda _: "C:/bin/private-gpt.exe")
+    monkeypatch.setattr(run_cmd, "_server_log_path", lambda: tmp_path / "server.log")
+    popen = MagicMock()
+    monkeypatch.setattr(run_cmd.subprocess, "Popen", popen)
+
+    run_cmd._start_server_subprocess()
+
+    cmd = popen.call_args.args[0]
+    assert cmd[:4] == [sys.executable, "-m", "private_gpt", "serve"]
+
+
+def test_windows_pid_alive_treats_access_denied_as_alive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kernel32 = MagicMock()
+    kernel32.OpenProcess.return_value = 0
+    monkeypatch.setattr(
+        serve_cmd, "_windows_kernel32", lambda: (kernel32, lambda: 5), raising=False
+    )
+
+    assert serve_cmd._windows_pid_alive(1234) is True
+
+
+def test_windows_pid_alive_treats_missing_process_as_stale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kernel32 = MagicMock()
+    kernel32.OpenProcess.return_value = 0
+    monkeypatch.setattr(
+        serve_cmd, "_windows_kernel32", lambda: (kernel32, lambda: 87), raising=False
+    )
+
+    assert serve_cmd._windows_pid_alive(1234) is False

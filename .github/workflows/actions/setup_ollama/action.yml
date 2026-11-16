@@ -60,26 +60,41 @@ runs:
           -RedirectStandardError (Join-Path $env:RUNNER_TEMP "ollama.err.log")
 
     - name: Pull models
-      shell: bash
+      shell: python
+      env:
+        OLLAMA_PULL_MODELS: ${{ inputs.models }}
       run: |
-        for i in $(seq 1 150); do
-          curl -sf http://127.0.0.1:11434/api/version >/dev/null && break
-          sleep 2
-        done
-        if ! curl -sf http://127.0.0.1:11434/api/version; then
-          cat "$RUNNER_TEMP"/ollama*.log || true
-          exit 1
-        fi
-        echo
-        for model in ${{ inputs.models }}; do
-          for attempt in 1 2 3; do
-            curl -sSf --max-time 900 http://127.0.0.1:11434/api/pull \
-              -d "{\"model\": \"$model\", \"stream\": false}" && break
-            echo "pull $model failed (attempt $attempt)"; sleep 10
-          done
-          echo
-        done
-        curl -sSf http://127.0.0.1:11434/v1/models
+        import json, os, sys, time, urllib.request
+
+        base = "http://127.0.0.1:11434"
+
+        def call(path, body=None, timeout=10):
+            data = json.dumps(body).encode() if body is not None else None
+            req = urllib.request.Request(base + path, data=data, method="POST" if data else "GET")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode()
+
+        deadline = time.monotonic() + 300
+        while True:
+            try:
+                print(call("/api/version"))
+                break
+            except OSError as exc:
+                if time.monotonic() > deadline:
+                    sys.exit(f"Ollama did not answer: {exc}")
+                time.sleep(2)
+
+        for model in os.environ["OLLAMA_PULL_MODELS"].split():
+            for attempt in range(1, 4):
+                try:
+                    print(call("/api/pull", {"model": model, "stream": False}, timeout=900))
+                    break
+                except OSError as exc:
+                    print(f"pull {model} failed (attempt {attempt}): {exc}")
+                    if attempt == 3:
+                        raise
+                    time.sleep(10)
+        print(call("/v1/models"))
 
     - name: Ollama logs
       if: failure()

@@ -67,7 +67,9 @@ def _server_log_path() -> Path:
 
 def _start_server_subprocess() -> "subprocess.Popen[bytes]":
     s = settings().server
-    private_gpt_bin = shutil.which("private-gpt")
+    # On Windows the private-gpt.exe launcher runs the server in a child
+    # process that terminating the launcher would leave behind.
+    private_gpt_bin = None if _IS_WINDOWS else shutil.which("private-gpt")
     base_cmd = (
         [private_gpt_bin, "serve"]
         if private_gpt_bin

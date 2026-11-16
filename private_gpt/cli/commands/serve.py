@@ -1,7 +1,9 @@
 import logging
 import os
 import signal
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 import uvicorn
@@ -18,15 +20,27 @@ PID_FILE_OPTION = typer.Option(
 )
 
 
+_ERROR_ACCESS_DENIED = 5
+
+
+def _windows_kernel32() -> tuple[Any, Callable[[], int]]:
+    import ctypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # ty:ignore[unresolved-attribute]
+    return kernel32, ctypes.get_last_error  # ty:ignore[unresolved-attribute]
+
+
 def _windows_pid_alive(pid: int) -> bool:
     import ctypes
 
     process_query_limited_information = 0x1000
     still_active = 259
-    kernel32 = ctypes.windll.kernel32  # ty:ignore[unresolved-attribute]
+    kernel32, last_error = _windows_kernel32()
     handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
     if not handle:
-        return False
+        # A live process owned by another user (e.g. an elevated server)
+        # refuses the handle; only a missing PID means the file is stale.
+        return last_error() == _ERROR_ACCESS_DENIED
     try:
         exit_code = ctypes.c_ulong()
         if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):

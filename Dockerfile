@@ -9,12 +9,8 @@ COPY --from=uv-bin /uv /usr/local/bin/uv
 ENV PATH="/usr/local/bin:${PATH}"
 ENV UV_LINK_MODE=copy \
     UV_CACHE_DIR=/root/.cache/uv
-
-FROM base AS os-deps
-ARG EXTRAS
 # snapshot.debian.org timestamp, e.g. 20261113T000000Z. Empty uses the live archive.
 ARG DEBIAN_SNAPSHOT=""
-RUN rm -f /etc/apt/apt.conf.d/docker-clean
 RUN set -eu; \
     if [ -n "$DEBIAN_SNAPSHOT" ]; then \
       sed -i \
@@ -23,6 +19,10 @@ RUN set -eu; \
         /etc/apt/sources.list.d/debian.sources; \
       echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99snapshot; \
     fi
+
+FROM base AS os-deps
+ARG EXTRAS
+RUN rm -f /etc/apt/apt.conf.d/docker-clean
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     set -eu; \
