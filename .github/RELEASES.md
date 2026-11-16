@@ -1,5 +1,13 @@
 # Component release policy
 
+This repository follows [zylon-base-template](https://github.com/zylon-ai/zylon-base-template).
+The common workflow is `.github/workflows/release-please.yml`; customize follow-up tasks
+in the reusable `.github/workflows/release-hooks.yml`, preserving its input contract.
+Release-please config and manifest files live at the repository root. All common
+release jobs use Ubuntu 24.04 and the same pinned release-please-action v5.0.0.
+Configure `CI_GITHUB_TOKEN`; existing `PAT` secrets are accepted as an alias. Neither
+workflow falls back to GITHUB_TOKEN, so generated PRs/events can trigger normal CI.
+
 `main` publishes new minor versions with release-please (`always-bump-minor`).
 Each stable component line has exactly one maintenance publisher: `release/X.Y`
 uses `always-bump-patch`. Product/BOM `zylon/*` branches no longer publish releases.

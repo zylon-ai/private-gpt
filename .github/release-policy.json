@@ -2,9 +2,9 @@
   "schema": 1,
   "trunk": "main",
   "adoption-version": "1.0.1",
-  "config": ".github/release_please/.release-please-config.json",
-  "maintenance-config": ".github/release_please/release-please-maintenance.json",
-  "manifest": ".github/release_please/.release-please-manifest.json",
+  "config": "release-please-config.json",
+  "maintenance-config": "release-please-maintenance.json",
+  "manifest": ".release-please-manifest.json",
   "workflow": ".github/workflows/release-please.yml",
   "bootstrap-files": [
     ".github/workflows/release-please.yml",
@@ -13,18 +13,29 @@
     ".github/scripts/release_policy.py",
     ".github/release-policy.json",
     ".github/scripts/test_release_policy.py",
-    ".github/workflows/post-release-please.yml"
+    ".github/workflows/post-release-please.yml",
+    ".github/workflows/release-hooks.yml"
   ],
   "metadata": [
     ".github/release_please/.release-please-config.json",
     ".github/release_please/.release-please-manifest.json",
     ".github/release_please/release-please-maintenance.json",
+    ".release-please-manifest.json",
     "CHANGELOG.md",
+    "release-please-config.json",
+    "release-please-maintenance.json",
     "version.txt"
   ],
   "mixed-version-files": [
     "fern/openapi/openapi.json",
     "pyproject.toml",
     "uv.lock"
-  ]
+  ],
+  "legacy-configs": [
+    ".github/release_please/.release-please-config.json"
+  ],
+  "legacy-manifests": [
+    ".github/release_please/.release-please-manifest.json"
+  ],
+  "template-repository": "zylon-ai/zylon-base-template"
 }

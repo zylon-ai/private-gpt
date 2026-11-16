@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/v17.6.0/schemas/config.json",
   "release-type": "simple",
   "version-file": "version.txt",
   "extra-files": [
@@ -11,7 +11,7 @@
   ],
   "packages": {
     ".": {
-      "versioning": "always-bump-patch"
+      "versioning": "always-bump-minor"
     }
   }
 }

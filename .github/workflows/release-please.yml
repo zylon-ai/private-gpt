@@ -1,10 +1,9 @@
-name: release-please
+name: Release
 
 on:
   push:
-    branches:
-      - main
-      - 'release/**'
+    branches: ['main', 'release/**']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,17 +15,43 @@ concurrency:
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    # GitHub template repositories validate the scaffold but never publish releases.
+    if: github.event.repository.is_template != true
+    runs-on: ubuntu-24.04
+    env:
+      # PAT is retained as an alias for existing repos. New repos use CI_GITHUB_TOKEN.
+      RELEASE_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.PAT }}
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      sha: ${{ steps.release.outputs.sha }}
+      pr: ${{ steps.release.outputs.pr }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Require the release automation token
+        run: |
+          test -n "$RELEASE_TOKEN" || { echo 'Configure CI_GITHUB_TOKEN (or the legacy PAT secret).' >&2; exit 1; }
       - name: Validate release-line ownership
         run: python3 .github/scripts/release_policy.py validate
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ env.RELEASE_TOKEN }}
           target-branch: ${{ github.ref_name }}
-          config-file: ${{ startsWith(github.ref_name, 'release/') && '.github/release_please/release-please-maintenance.json' || '.github/release_please/.release-please-config.json' }}
-          manifest-file: .github/release_please/.release-please-manifest.json
+          config-file: ${{ startsWith(github.ref_name, 'release/') && 'release-please-maintenance.json' || 'release-please-config.json' }}
+          manifest-file: .release-please-manifest.json
+
+  release-hooks:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true' || needs.release-please.outputs.pr != ''
+    uses: ./.github/workflows/release-hooks.yml
+    with:
+      release_created: ${{ needs.release-please.outputs.release_created == 'true' }}
+      version: ${{ needs.release-please.outputs.version }}
+      tag_name: ${{ needs.release-please.outputs.tag_name }}
+      sha: ${{ needs.release-please.outputs.sha }}
+      pr: ${{ needs.release-please.outputs.pr }}
+    secrets: inherit
