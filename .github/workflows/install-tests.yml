@@ -1,17 +1,8 @@
 name: install-tests
 
 on:
-  pull_request:
-    paths:
-      - 'private_gpt/**'
-      - 'scripts/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'Dockerfile'
-      - 'settings.yaml'
-      - '.github/workflows/install-tests.yml'
-      - '.github/workflows/generate-release.yml'
-      - '.github/workflows/actions/setup_ollama/**'
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
 
 permissions:
@@ -19,7 +10,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   EXTRA: core
@@ -28,7 +19,19 @@ env:
   PYTHONUTF8: "1"
 
 jobs:
+  gate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.review.state == 'approved' &&
+       github.event.pull_request.head.ref == 'release-please--branches--main')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running install tests for $REF"
+        env:
+          REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+
   build:
+    needs: gate
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -169,6 +172,7 @@ jobs:
           done
 
   source:
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -258,6 +262,7 @@ jobs:
         run: tail -n 200 "$RUNNER_TEMP/serve-brew.log" || true
 
   docker:
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
