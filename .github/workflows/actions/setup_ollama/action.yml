@@ -54,13 +54,6 @@ runs:
         if ($LASTEXITCODE -ne 0) { throw "Ollama download failed" }
         Expand-Archive -Path $zip -DestinationPath $dir
         Add-Content -Path $env:GITHUB_PATH -Value $dir
-        $env:OLLAMA_HOST = "127.0.0.1:11434"
-        # The runner kills processes left by a step when it ends, so the
-        # server must be detached from the step's job object.
-        $log = Join-Path $env:RUNNER_TEMP "ollama.log"
-        $exe = Join-Path $dir "ollama.exe"
-        $cmd = "`"$exe`" serve > `"$log`" 2>&1"
-        Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "cmd.exe /c $cmd" } | Out-Null
 
     - name: Pull models
       shell: python
@@ -77,12 +70,30 @@ runs:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.read().decode()
 
+        proc = None
+        if os.name == "nt":
+            import subprocess
+            exe = os.path.join(os.environ["RUNNER_TEMP"], "ollama", "ollama.exe")
+            log = open(os.path.join(os.environ["RUNNER_TEMP"], "ollama.log"), "ab")
+            flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            env = {**os.environ, "OLLAMA_HOST": "127.0.0.1:11434"}
+            try:
+                proc = subprocess.Popen([exe, "serve"], stdout=log, stderr=log, env=env,
+                                        creationflags=flags | subprocess.CREATE_BREAKAWAY_FROM_JOB)
+            except OSError as exc:
+                print(f"breakaway not allowed ({exc}); starting inside the job")
+                proc = subprocess.Popen([exe, "serve"], stdout=log, stderr=log, env=env,
+                                        creationflags=flags)
+            print(f"started ollama pid={proc.pid}")
+
         deadline = time.monotonic() + 300
         while True:
             try:
                 print(call("/api/version"))
                 break
             except OSError as exc:
+                if proc is not None and proc.poll() is not None:
+                    sys.exit(f"Ollama exited with code {proc.returncode}")
                 if time.monotonic() > deadline:
                     sys.exit(f"Ollama did not answer: {exc}")
                 time.sleep(2)
