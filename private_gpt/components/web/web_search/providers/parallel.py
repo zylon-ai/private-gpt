@@ -9,7 +9,7 @@ from private_gpt.settings.settings import Settings
 from private_gpt.utils.dependencies import format_missing_dependency_message
 
 if TYPE_CHECKING:
-    from httpx2 import Request
+    from httpx2 import URL, Response
 
 _PARALLEL_MCP_URL = "https://mcp.parallel.ai/mcp"
 
@@ -23,14 +23,6 @@ class ParallelSearchHit(BaseModel):
 
 class ParallelSearchResponse(BaseModel):
     results: list[ParallelSearchHit]
-
-
-async def _limit_teardown(request: "Request") -> None:
-    if request.method == "DELETE":
-        # A stalled session close should not hold up a completed search.
-        request.extensions["timeout"] = dict.fromkeys(
-            ("connect", "read", "write", "pool"), 1.0
-        )
 
 
 class ParallelSearchProvider(BaseWebSearchProvider):
@@ -59,6 +51,12 @@ class ParallelSearchProvider(BaseWebSearchProvider):
         from mcp.client.streamable_http import streamable_http_client
         from mcp.types import CallToolResult
 
+        class ParallelMCPClient(AsyncClient):
+            async def delete(self, url: "URL | str", **kwargs: Any) -> "Response":
+                # Bound the whole session close, including a streaming response.
+                async with asyncio.timeout(1):
+                    return await super().delete(url, **kwargs)
+
         query = query.strip()
         if not query:
             raise ValueError("Search query cannot be empty")
@@ -70,12 +68,11 @@ class ParallelSearchProvider(BaseWebSearchProvider):
         result = None
         error = None
         async with (
-            AsyncClient(
+            ParallelMCPClient(
                 headers=headers,
                 timeout=self._settings.timeout,
                 trust_env=self._network.proxy.enabled,
                 follow_redirects=False,
-                event_hooks={"request": [_limit_teardown]},
             ) as client,
             streamable_http_client(_PARALLEL_MCP_URL, http_client=client) as (
                 reader,

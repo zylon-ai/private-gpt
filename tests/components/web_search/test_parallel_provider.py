@@ -245,15 +245,26 @@ async def test_parallel_closes_held_open_sse_reply(monkeypatch, tool_error):
             release.set()
 
 
-async def test_parallel_returns_results_when_session_teardown_stalls(monkeypatch):
+@pytest.mark.parametrize("stream_body", [False, True])
+async def test_parallel_session_teardown_has_total_deadline(monkeypatch, stream_body):
     release = asyncio.Event()
 
     async def handler(request):
         if request.method == "GET":
             return web.Response(status=405)
         if request.method == "DELETE":
-            await release.wait()
-            return web.Response(status=204)
+            if not stream_body:
+                await release.wait()
+                return web.Response(status=204)
+            response = web.StreamResponse(status=200)
+            await response.prepare(request)
+            try:
+                for _ in range(12):
+                    await response.write(b" ")
+                    await asyncio.sleep(0.25)
+            except ConnectionResetError:
+                pass
+            return response
         call = await request.json()
         return await _handle_rpc(
             call,
@@ -267,7 +278,7 @@ async def test_parallel_returns_results_when_session_teardown_stalls(monkeypatch
         monkeypatch.setattr(parallel, "_PARALLEL_MCP_URL", url)
         try:
             results = await asyncio.wait_for(
-                _provider().make_query("Search query", 1), 3
+                _provider().make_query("Search query", 1), 2
             )
             assert results[0].description == "An excerpt"
         finally:
