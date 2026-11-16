@@ -55,9 +55,12 @@ runs:
         Expand-Archive -Path $zip -DestinationPath $dir
         Add-Content -Path $env:GITHUB_PATH -Value $dir
         $env:OLLAMA_HOST = "127.0.0.1:11434"
-        Start-Process -FilePath (Join-Path $dir "ollama.exe") -ArgumentList "serve" -WindowStyle Hidden `
-          -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP "ollama.log") `
-          -RedirectStandardError (Join-Path $env:RUNNER_TEMP "ollama.err.log")
+        # The runner kills processes left by a step when it ends, so the
+        # server must be detached from the step's job object.
+        $log = Join-Path $env:RUNNER_TEMP "ollama.log"
+        $exe = Join-Path $dir "ollama.exe"
+        $cmd = "`"$exe`" serve > `"$log`" 2>&1"
+        Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "cmd.exe /c $cmd" } | Out-Null
 
     - name: Pull models
       shell: python
