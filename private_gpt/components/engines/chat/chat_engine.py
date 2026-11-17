@@ -61,6 +61,9 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
     ToolExecutionHook,
 )
+from private_gpt.components.engines.chat.utils.loop_guard import (
+    apply_loop_guard_view,
+)
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
     build_request_from_context_stack,
@@ -414,9 +417,15 @@ class ChatLoopEngine:
                 or DefinedPriorities.LLM.CHAT_PRIORITY
             )
 
+        chat_history, disable_tools = apply_loop_guard_view(
+            run.state.input.request.to_messages(),
+            run.state.input.loop_guard,
+        )
+        if disable_tools:
+            llm_tools = []
         response_stream = await run.llm.astream_chat_with_tools(
             llm_tools,
-            chat_history=run.state.input.request.to_messages(),
+            chat_history=chat_history,
             allow_parallel_tool_calls=run.state.input.request.tool_config.allow_parallel_tool_calls,
             **llm_kwargs,
         )

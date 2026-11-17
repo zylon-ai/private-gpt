@@ -8,8 +8,6 @@ from pydantic import BaseModel, Field
 from private_gpt.components.chat.processors.chat_history.memory.utils.content import (
     messages_to_history_str,
 )
-from private_gpt.components.context.models.context_layer import RuntimeInstructionsLayer
-from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
@@ -17,15 +15,14 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
     ChatInterceptorContext,
 )
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
+from private_gpt.components.engines.chat.utils.loop_guard import (
+    LoopGuardDirective,
+    LoopGuardLevel,
+)
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
-
-_LOOP_RECOVERY_INSTRUCTION = """The assistant has entered a repetitive loop. Stop the
-current approach and reply directly to the user. Briefly explain that progress has
-stalled, then ask the user how they would like to continue. Do not call tools or continue
-the previous sequence of actions."""
 
 _LOOP_DETECTION_EXAMPLES = json.dumps(
     [
@@ -98,7 +95,14 @@ def _messages_since_last_user(messages: list[ChatMessage]) -> list[ChatMessage]:
 
 @singleton
 class LoopDetectionRequestInterceptor(ChatRequestLoopInterceptor):
-    """Classify every N assistant messages since the latest user message."""
+    """Ask the LLM whether the work since the latest user message is a loop.
+
+    Fallback for loops the deterministic repeat guard cannot see (different
+    arguments, same intent). Runs once every ``interval`` assistant messages
+    since the latest user message. On a detected loop, the next LLM call gets
+    the history as a work log with tools removed, so the model answers with
+    what it already has.
+    """
 
     @inject
     def __init__(
@@ -111,6 +115,9 @@ class LoopDetectionRequestInterceptor(ChatRequestLoopInterceptor):
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
         if self._interval is None or context.phase != InterceptorPhase.BEFORE_ITERATION:
+            return
+        current = context.state.input.loop_guard
+        if current is not None and current.level >= LoopGuardLevel.FINAL:
             return
 
         messages = _messages_since_last_user(context.state.input.request.to_messages())
@@ -128,18 +135,19 @@ class LoopDetectionRequestInterceptor(ChatRequestLoopInterceptor):
             result = await context.llm.astructured_predict(
                 output_cls=LoopDetectionResult,
                 prompt=prompt,
-                llm_kwargs={"max_tokens": 128},
+                llm_kwargs={"max_tokens": 512},
             )
-        except Exception:
-            logger.exception("Loop detection evaluation failed; continuing normally")
+        except Exception as error:
+            logger.warning(
+                "Loop detection evaluation failed; continuing normally: %s", error
+            )
             return
 
         if not result.is_loop:
             return
 
-        context.state.input.context_stack = ContextStack().append_layer(
-            RuntimeInstructionsLayer(
-                source="loop-detection",
-                text=_LOOP_RECOVERY_INSTRUCTION,
-            )
+        logger.info("Loop detected by classifier: %s", result.reason)
+        context.state.input.loop_guard = LoopGuardDirective(
+            level=LoopGuardLevel.FINAL, reason=result.reason
         )
+        context.set_state(context.state)

@@ -15,6 +15,9 @@ from private_gpt.components.engines.chat.models.chat_llm_params import (
 from private_gpt.components.engines.chat.models.chat_phase import (
     TimelinePhase,
 )
+from private_gpt.components.engines.chat.utils.loop_guard import (
+    LoopGuardDirective,
+)
 from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.skills.models.skill_entities import (
     SkillVersionWithSkillEntity,
@@ -37,6 +40,11 @@ class ChatInputState(BaseModel):
     context_stack: ContextStack = Field(default_factory=ContextStack)
     sampling_params: dict[str, Any] = Field(default_factory=dict)
     llm_kwargs: ChatLLMParameters = Field(default_factory=ChatLLMParameters)
+    loop_guard: LoopGuardDirective | None = Field(
+        default=None,
+        description="How the next LLM call renders the history to break a loop. "
+        "Recomputed each iteration; never changes the stored history.",
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
