@@ -115,21 +115,21 @@ Once `settings-model.yaml` exists, start PrivateGPT with `PGPT_PROFILES=model`.
     ```bash
     OPENAI_API_BASE=http://localhost:11434/v1 \
       PGPT_PROFILES=model \
-      uv run python -m private_gpt
+      uv run private-gpt serve
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">
     ```powershell
     $env:OPENAI_API_BASE = "http://localhost:11434/v1"
     $env:PGPT_PROFILES = "model"
-    uv run python -m private_gpt
+    uv run private-gpt serve
     ```
   </Tab>
   <Tab title="Windows (CMD)">
     ```cmd
     set OPENAI_API_BASE=http://localhost:11434/v1
     set PGPT_PROFILES=model
-    uv run python -m private_gpt
+    uv run private-gpt serve
     ```
   </Tab>
 </Tabs>

@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import magic  # ty:ignore[unresolved-import]
 from anyio import to_thread
 
 from private_gpt.components.storage.models import FileInfo
+from private_gpt.utils.mime import detect_mime_from_file
 
 if TYPE_CHECKING:
     from private_gpt.components.storage.models import StoredFile
@@ -118,10 +118,7 @@ class LocalObjectStorage(ObjectStorage):
         if not target.exists() or not target.is_file():
             return None
         stat = target.stat()
-        try:
-            mime = magic.Magic(mime=True).from_file(str(target))
-        except Exception:
-            mime = "application/octet-stream"
+        mime = detect_mime_from_file(target)
         try:
             etag = hashlib.md5(target.read_bytes()).hexdigest()
         except OSError:
@@ -146,10 +143,7 @@ class LocalObjectStorage(ObjectStorage):
             if not entry.is_file():
                 continue
             stat = entry.stat()
-            try:
-                mime = magic.Magic(mime=True).from_file(str(entry))
-            except Exception:
-                mime = "application/octet-stream"
+            mime = detect_mime_from_file(entry)
             try:
                 etag = hashlib.md5(entry.read_bytes()).hexdigest()
             except OSError:
