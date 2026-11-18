@@ -84,6 +84,7 @@ chat:
   allow_use_reasoning: ${PGPT_ALLOW_USE_REASONING:true}
   return_missing_citations: ${PGPT_RETURN_MISSING_CITATIONS:false}
   deduplicate_context_in_history: ${PGPT_DEDUPLICATE_CONTEXT_IN_HISTORY:true}
+  deduplicate_context_keep: ${PGPT_DEDUPLICATE_CONTEXT_KEEP:first}
   add_context_to_system_prompt: ${PGPT_ADD_CONTEXT_TO_SYSTEM_PROMPT:false}
   force_to_return_citations: ${PGPT_FORCE_TO_RETURN_CITATIONS:false}
   numerical_shorter_citations: ${PGPT_NUMERICAL_SHORTER_CITATIONS:false}
