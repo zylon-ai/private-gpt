@@ -39,7 +39,11 @@ logger = logging.getLogger(__name__)
 
 def _simple_authentication(authorization: Annotated[str, Header()] = "") -> bool:
     """Check if the request is authenticated."""
-    if not secrets.compare_digest(authorization, settings().server.auth.secret):
+    # Compare bytes: compare_digest raises TypeError on non-ASCII str input.
+    if not secrets.compare_digest(
+        authorization.encode("utf-8"),
+        settings().server.auth.secret.encode("utf-8"),
+    ):
         # If the "Authorization" header is not the expected one, raise an exception.
         raise NOT_AUTHENTICATED
     return True
