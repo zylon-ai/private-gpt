@@ -1563,6 +1563,20 @@ class TestNoAccidentalMutationAcrossFullChain:
         # the loop after one call awaiting client execution — see the
         # sibling class docstring). `list_skills` is server-executed and
         # safe to call repeatedly.
+        # The three calls are identical on purpose, which the repeat guard would
+        # (correctly) fold into a work log on the last call. This test is about
+        # metadata surviving the chain, so look at the raw history.
+        settings = injector.get(Settings)
+        previous_guard = settings.chat.repeat_guard.enabled
+        settings.chat.repeat_guard.enabled = False
+        try:
+            await self._run_full_multi_iteration(async_test_client, injector)
+        finally:
+            settings.chat.repeat_guard.enabled = previous_guard
+
+    async def _run_full_multi_iteration(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
         capture = ChainCapture()
         await install_capturing_llm(
             injector,

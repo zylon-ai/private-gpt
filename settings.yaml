@@ -78,6 +78,10 @@ chat:
   engine_mode: ${PGPT_CHAT_ENGINE_MODE:async}
   max_iterations: ${PGPT_CHAT_MAX_ITERATIONS:100}
   loop_detection_interval: ${PGPT_CHAT_LOOP_DETECTION_INTERVAL:10}
+  repeat_guard:
+    enabled: ${PGPT_CHAT_REPEAT_GUARD_ENABLED:true}
+    flatten_after: ${PGPT_CHAT_REPEAT_GUARD_FLATTEN_AFTER:3}
+    final_after: ${PGPT_CHAT_REPEAT_GUARD_FINAL_AFTER:4}
   allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
   allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
   allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
