@@ -1825,6 +1825,13 @@ class BraveSearchSettings(BaseModel):
     timeout: int = Field(default=30, description="Request timeout in seconds")
 
 
+class ParallelSearchSettings(BaseModel):
+    api_key: str | None = Field(
+        default=None, repr=False, description="Optional Parallel API key"
+    )
+    timeout: int = Field(default=30, gt=0, description="Search timeout in seconds")
+
+
 class WebSearchParams(BaseModel):
     max_timeout_seconds: int | None = Field(
         default=70, description="Maximum timeout to spend in webseach."
@@ -1878,7 +1885,7 @@ class WebSearchSettings(BaseModel):
         default=False,
         description="Flag indicating if the web search is enabled.",
     )
-    provider: Literal["brave", "mock"] = Field(
+    provider: Literal["brave", "mock", "parallel"] = Field(
         default="brave",
         description="The web search provider to use.",
     )
@@ -2488,6 +2495,7 @@ class Settings(BaseModel):
     web_search: WebSearchSettings
     database_query: DatabaseQuerySettings
     brave: BraveSearchSettings
+    parallel: ParallelSearchSettings = Field(default_factory=ParallelSearchSettings)
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings

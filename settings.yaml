@@ -347,6 +347,10 @@ brave:
   api_key: ${PGPT_BRAVE_API_KEY:}
   rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
 
+parallel:
+  api_key: ${PGPT_PARALLEL_API_KEY:}
+  timeout: ${PGPT_PARALLEL_TIMEOUT:30}
+
 skills:
   database: ${PGPT_SKILLS_DATABASE:sqlite}
   storage_provider: ${PGPT_SKILLS_STORAGE_PROVIDER:local}

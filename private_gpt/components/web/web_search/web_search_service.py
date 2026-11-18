@@ -130,6 +130,12 @@ class WebSearchService:
             )
 
             self._provider = MockSearchProvider()
+        elif self._settings.web_search.provider == "parallel":
+            from private_gpt.components.web.web_search.providers.parallel import (
+                ParallelSearchProvider,
+            )
+
+            self._provider = ParallelSearchProvider(self._settings)
         else:
             logger.error(
                 f"Unsupported web search provider: {self._settings.web_search.provider}"
@@ -143,7 +149,12 @@ class WebSearchService:
                 CachedProvider,
             )
 
-            self._provider = CachedProvider(self._provider)
+            if self._settings.web_search.provider == "parallel":
+                self._provider = CachedProvider(
+                    self._provider, cache_dir=".cache/web_search/parallel"
+                )
+            else:
+                self._provider = CachedProvider(self._provider)
 
     def _initialize_processor(self) -> None:
         if self._settings.web_search.processor == "simple_text":
