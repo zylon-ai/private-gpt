@@ -270,3 +270,21 @@ def test_normalize_tabs_and_bold_headers() -> None:
         "## **Header 2**"
     )
     assert normalizer.normalize_markdown(content) == expected
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "1.5 million users signed up.",
+        "-5 degrees overnight.",
+        "*Note:* prices exclude tax.",
+        "+44 20 7946 0958",
+        "---",
+        "***",
+    ],
+)
+def test_keep_lines_that_only_start_with_a_list_marker_character(line: str) -> None:
+    """Test that a marker character not followed by a space is not a list item."""
+    normalizer = MarkdownNormalizer(target_indent=2)
+    content = f"Intro\n\n{line}\n\nOutro"
+    assert normalizer.normalize_markdown(content) == content
