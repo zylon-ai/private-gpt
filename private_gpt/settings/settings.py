@@ -1825,6 +1825,18 @@ class BraveSearchSettings(BaseModel):
     timeout: int = Field(default=30, description="Request timeout in seconds")
 
 
+class SpecStreamSearchSettings(BaseModel):
+    api_key: str = Field(default="", description="SpecStream API key")
+    speed: Literal["default", "fast"] = Field(
+        default="fast",
+        description="SpecStream search speed tier ('fast' or 'default')",
+    )
+    rate_limit: float = Field(
+        default=1.0, description="Maximum API requests per second"
+    )
+    timeout: int = Field(default=30, description="Request timeout in seconds")
+
+
 class WebSearchParams(BaseModel):
     max_timeout_seconds: int | None = Field(
         default=70, description="Maximum timeout to spend in webseach."
@@ -1878,7 +1890,7 @@ class WebSearchSettings(BaseModel):
         default=False,
         description="Flag indicating if the web search is enabled.",
     )
-    provider: Literal["brave", "mock"] = Field(
+    provider: Literal["brave", "specstream", "mock"] = Field(
         default="brave",
         description="The web search provider to use.",
     )
@@ -2488,6 +2500,9 @@ class Settings(BaseModel):
     web_search: WebSearchSettings
     database_query: DatabaseQuerySettings
     brave: BraveSearchSettings
+    specstream: SpecStreamSearchSettings = Field(
+        default_factory=SpecStreamSearchSettings
+    )
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
