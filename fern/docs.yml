@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: Requesty
+            slug: providers/requesty
+            path: ./docs/pages/providers/requesty.mdx
       - section: Integrations
         skip-slug: true
         contents:

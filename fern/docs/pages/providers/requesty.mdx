@@ -1,0 +1,167 @@
+---
+title: "Requesty"
+description: "Configure PrivateGPT with Requesty for GPT, Claude, Gemini, DeepSeek and other chat models plus OpenAI embeddings through one OpenAI-compatible base URL."
+---
+
+[Requesty](https://www.requesty.ai) is an LLM gateway with an OpenAI-compatible endpoint at `https://router.requesty.ai/v1`. It serves chat models from OpenAI, Anthropic, Google, DeepSeek, xAI and others under `provider/model` IDs, plus embedding models on `/v1/embeddings`, behind a single API key. PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+Chat models are discovered automatically. Embedding models are not listed on `/v1/models`, so this setup declares the embedding model in a small settings profile.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ chat models only, with context window and output limit |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ declare the model in a profile |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+Tool calling and JSON-schema output were checked against the live API with `openai/gpt-4o-mini` and `anthropic/claude-sonnet-5-5`, and image input with `openai/gpt-4o-mini`. Each model's entry on `/v1/models` reports `supports_tool_calling`, `supports_vision` and `supports_reasoning`.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and pick a chat model">
+    1. Sign in to Requesty and create an API key on the [API keys page](https://app.requesty.ai/api-keys).
+    2. Set `REQUESTY_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export REQUESTY_API_KEY="your-requesty-api-key"
+    ```
+
+    3. List the chat models your key can call and use one of the IDs unchanged, including its `provider/` prefix:
+
+    ```bash
+    curl https://router.requesty.ai/v1/models \
+      -H "Authorization: Bearer $REQUESTY_API_KEY"
+    ```
+
+    Embedding models are listed separately at `https://router.requesty.ai/v1/models/embedding`. The public catalog with prices is on the [models page](https://www.requesty.ai/models).
+  </Step>
+
+  <Step title="Declare the embedding model">
+    Create `settings-requesty.yaml` next to `settings.yaml`:
+
+    ```yaml
+    # settings-requesty.yaml
+    embedding:
+      default_model: openai/text-embedding-3-small
+
+    models:
+      - name: openai/text-embedding-3-small
+        type: embedding
+        mode: openai
+        context_window: 8191
+        embed_dim: 1536
+    ```
+
+    `openai/text-embedding-3-small` returns 1536 dimensions, which matches the default `vectorstore.embed_dim`. If you pick a model with a different size, set `embed_dim` and `vectorstore.embed_dim` to that size before ingesting documents.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://router.requesty.ai/v1 \
+          OPENAI_API_KEY="$REQUESTY_API_KEY" \
+          PGPT_LLM_DEFAULT=openai/gpt-5.4-mini \
+          PGPT_PROFILES=requesty \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -v ./settings-requesty.yaml:/home/worker/app/settings-requesty.yaml \
+          -e OPENAI_API_BASE=https://router.requesty.ai/v1 \
+          -e OPENAI_API_KEY="$REQUESTY_API_KEY" \
+          -e PGPT_LLM_DEFAULT=openai/gpt-5.4-mini \
+          -e PGPT_PROFILES=requesty \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://router.requesty.ai/v1 \
+          OPENAI_API_KEY="$REQUESTY_API_KEY" \
+          PGPT_LLM_DEFAULT=openai/gpt-5.4-mini \
+          PGPT_PROFILES=requesty \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+Model discovery registers every chat model your key can call, which can be several hundred. To offer only a few models, turn discovery off and list them in the profile. Context windows below come from `/v1/models`.
+
+```yaml
+# settings-requesty.yaml
+llm:
+  default_model: openai/gpt-5.4-mini
+  auto_discover_models: false
+
+embedding:
+  default_model: openai/text-embedding-3-small
+  auto_discover_models: false
+
+models:
+  - name: openai/gpt-5.4-mini
+    type: llm
+    mode: openai
+    prompt_style: chat
+    context_window: 400000
+    support_tools: true
+    support_reasoning: true
+
+  - name: anthropic/claude-sonnet-5-5
+    type: llm
+    mode: openai
+    prompt_style: chat
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+
+  - name: google/gemini-3.6-flash
+    type: llm
+    mode: openai
+    prompt_style: chat
+    context_window: 1048576
+    support_tools: true
+    support_reasoning: true
+
+  - name: openai/text-embedding-3-small
+    type: embedding
+    mode: openai
+    context_window: 8191
+    embed_dim: 1536
+```
+
+Run with the profile:
+
+```bash
+OPENAI_API_BASE=https://router.requesty.ai/v1 \
+  OPENAI_API_KEY="$REQUESTY_API_KEY" \
+  PGPT_PROFILES=requesty \
+  uv run python -m private_gpt
+```
+
+---
+
+## Notes
+
+- **Model IDs** come from `/v1/models` for your key. If an organization restricts which models a key may use, only the approved ones are listed.
+- **EU endpoint:** use `https://router.eu.requesty.ai/v1` as `OPENAI_API_BASE` to keep Requesty's processing in the EU. Inference also stays in the EU only with EU model IDs, such as those ending in `@eu` or `@eu-central-1`.
+- **Embeddings are hosted too** in this setup, so document chunks are sent to Requesty during ingestion, and retrieved excerpts are sent with each chat prompt. To keep embeddings local, point `OPENAI_EMBEDDING_API_BASE` at your own server as in the [Ollama](/providers/ollama) guide and declare that embedding model in the profile instead.
+- Because Requesty does not expose `/tokenize`, PrivateGPT falls back to its default tokenizer for token counting.
