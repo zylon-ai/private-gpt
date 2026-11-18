@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - 'release/**'
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
@@ -14,7 +15,7 @@ permissions:
 jobs:
   update-openapi:
     runs-on: ubuntu-latest
-    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    if: startsWith(github.head_ref, 'release-please--branches--') || startsWith(github.ref_name, 'release-please--branches--')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -42,7 +43,7 @@ jobs:
 
   update-uv-lock:
     runs-on: ubuntu-latest
-    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    if: startsWith(github.head_ref, 'release-please--branches--') || startsWith(github.ref_name, 'release-please--branches--')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
