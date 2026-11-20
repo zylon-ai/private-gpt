@@ -1,0 +1,86 @@
+---
+title: "UberLLM"
+description: "Configure PrivateGPT with UberLLM for OpenAI-compatible chat models and a separate local embeddings server."
+---
+
+[UberLLM](https://uberllm.dev) is a pay-as-you-go, OpenAI-compatible API that serves chat models such as GPT, Claude, Gemini, DeepSeek, Qwen and Kimi through one key. PrivateGPT can use its Chat Completions endpoint at `https://api.uberllm.dev/v1` through the existing OpenAI-compatible integration.
+
+UberLLM has no embeddings endpoint, so this setup sends chat requests to UberLLM and keeps embeddings on a separate local [Ollama](/providers/ollama) server. It does not require a new PrivateGPT backend.
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and choose a chat model">
+    1. Sign up at [uberllm.dev](https://uberllm.dev), add prepaid credit and create an API key.
+    2. Set `OPENAI_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+    3. List the chat models:
+
+    ```bash
+    curl https://api.uberllm.dev/v1/models
+    ```
+
+    Model IDs use the `provider/model` form, for example `deepseek/deepseek-v4-flash`. Set `UBERLLM_MODEL` to the exact ID of a chat model from the response:
+
+    ```bash
+    export UBERLLM_MODEL="deepseek/deepseek-v4-flash"
+    ```
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Start Ollama and pull the embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    These examples use Ollama's OpenAI-compatible API at `http://localhost:11434/v1`, with the separate placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.uberllm.dev/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$UBERLLM_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.uberllm.dev/v1 \
+          -e OPENAI_API_KEY \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT="$UBERLLM_MODEL" \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`. Ollama must listen on an address reachable from the container.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.uberllm.dev/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$UBERLLM_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+## Model limits and capabilities
+
+- `GET /v1/models` lists chat models only and returns `context_length` and `max_output_tokens` for each one, so model discovery sets the context window and output limit.
+- Use the model ID returned by `/v1/models` unchanged, including its `provider/` prefix.
+- Streaming is supported. Tools, reasoning and image input depend on the model; `/v1/models` reports `supports_tools` and `supports_vision` for each one.
+- The examples use local embeddings. Retrieved document excerpts included in a chat prompt are still sent to the hosted API.

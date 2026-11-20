@@ -14,6 +14,7 @@ def render_formula(
     sha256: str,
     homepage: str,
     package_files_url: str,
+    constraints_url: str,
     extra: str,
 ) -> str:
     return f"""class PrivateGpt < Formula
@@ -23,13 +24,14 @@ def render_formula(
   sha256 "{sha256}"
   license "Apache-2.0"
 
+  depends_on "libmagic"
   depends_on "python@3.11"
   depends_on "uv"
 
   def install
     (bin/"private-gpt").write <<~SH
       #!/bin/bash
-      exec "#{{Formula["uv"].opt_bin}}/uv" tool run --python "#{{Formula["python@3.11"].opt_bin}}/python3.11" --find-links "{package_files_url}" --from "private-gpt[{extra}]=={version}" private-gpt "$@"
+      exec "#{{Formula["uv"].opt_bin}}/uv" tool run --python "#{{Formula["python@3.11"].opt_bin}}/python3.11" --find-links "{package_files_url}" --constraints "{constraints_url}" --from "private-gpt[{extra}]=={version}" private-gpt "$@"
     SH
   end
 
@@ -37,7 +39,8 @@ def render_formula(
     script = (bin/"private-gpt").read
     assert_match "private-gpt[{extra}]=={version}", script
     assert_match "{package_files_url}", script
-    assert_match Formula["uv"].opt_bin.realpath.to_s, script
+    assert_match "{constraints_url}", script
+    assert_match Formula["uv"].opt_bin.to_s, script
   end
 end
 """
@@ -54,6 +57,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--extra", default="core")
     parser.add_argument("--package-files-url", required=True)
+    parser.add_argument("--constraints-url", required=True)
     parser.add_argument("--output", required=True)
     return parser.parse_args()
 
@@ -66,6 +70,7 @@ def main() -> None:
         sha256=args.sha256,
         homepage=args.homepage,
         package_files_url=args.package_files_url,
+        constraints_url=args.constraints_url,
         extra=args.extra,
     )
     Path(args.output).write_text(formula)

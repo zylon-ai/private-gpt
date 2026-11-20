@@ -50,6 +50,9 @@ from private_gpt.server.chat.interceptors.multimodal_interceptor import (
 from private_gpt.server.chat.interceptors.platform_guidelines_interceptor import (
     PlatformGuidelinesInterceptor,
 )
+from private_gpt.server.chat.interceptors.repeat_guard_interceptor import (
+    RepeatGuardRequestInterceptor,
+)
 from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
     RuntimeModelRequestInterceptor,
 )
@@ -113,6 +116,7 @@ class ChatInterceptorService:
         citation_interceptor: CitationRequestInterceptor,
         platform_guidelines_interceptor: PlatformGuidelinesInterceptor,
         condensation_interceptor: CondensationRequestInterceptor,
+        repeat_guard_interceptor: RepeatGuardRequestInterceptor,
         loop_detection_interceptor: LoopDetectionRequestInterceptor,
         # --- response interceptors (run each iteration, order matters) ---
         extract_citation_response_interceptor: ExtractCitationInterceptor,
@@ -203,8 +207,12 @@ class ChatInterceptorService:
                 ],
                 condition=settings.chat.add_context_to_system_prompt,
             )
-            # Run last so loop recovery can discard every accumulated layer.
-            .add_range("loop_detection", requests=[loop_detection_interceptor])
+            # Run last: the repeat guard and the loop classifier only decide how
+            # the next LLM call renders the history (see loop_guard.py).
+            .add_range(
+                "loop_detection",
+                requests=[repeat_guard_interceptor, loop_detection_interceptor],
+            )
             # --- Response ---
             # Extract citations if they are enabled
             .add_range(

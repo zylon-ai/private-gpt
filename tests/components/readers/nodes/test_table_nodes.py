@@ -779,3 +779,25 @@ def test_table_row_mixed_node_types_in_table() -> None:
     assert not row1.is_last_row()
     assert not row2.is_first_row()
     assert row2.is_last_row()
+
+
+def test_table_row_serialization_keeps_numeric_looking_strings() -> None:
+    # JSON keeps numbers as numbers, so a string cell is text from the document
+    content = ["01067", "1.10", "+4930123", "1_000", 42, 2.5]
+    headers = ["zip", "version", "phone", "id", "int", "float"]
+
+    row = TableRowNode(header=headers, content=content)
+    json_obj = json.loads(json.dumps(row.model_dump()))
+    deserialized = TableRowNode.from_dict(json_obj)
+
+    assert deserialized.content == content
+
+
+def test_table_node_serialization_keeps_numeric_looking_strings() -> None:
+    df = pd.DataFrame({"zip": ["01067", "80331"], "version": ["1.10", "2.0"]})
+
+    node = TableNode(df=df)
+    json_obj = json.loads(json.dumps(node.model_dump()))
+    deserialized = TableNode.from_dict(json_obj)
+
+    assert deserialized.df.equals(df)

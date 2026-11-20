@@ -1,10 +1,11 @@
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
-from celery import Celery
-from celery.result import AsyncResult
 from pydantic import BaseModel, Field
 
 from private_gpt.utils.custom_typing import T
+
+if TYPE_CHECKING:
+    from celery import Celery
 
 
 class Task(BaseModel):
@@ -86,12 +87,14 @@ class TaskStatus(BaseModel, Generic[T]):
     }
 
     @classmethod
-    def from_celery_task(cls, celery_app: Celery, task_id: str) -> "TaskStatus[T]":
+    def from_celery_task(cls, celery_app: "Celery", task_id: str) -> "TaskStatus[T]":
         """Creates a TaskStatus instance from a Celery task result.
 
         Handles different task states and properly formats results or exceptions
         into the appropriate response structure.
         """
+        from celery.result import AsyncResult
+
         async_result: AsyncResult[T] = AsyncResult(task_id, app=celery_app)
         # Check if task is in progress, completed or failed
         task_result = (

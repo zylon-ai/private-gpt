@@ -12,6 +12,7 @@ env:
   RELEASE_PACKAGE_EXTRA: "core"
   PACKAGE_INDEX_BRANCH: gh-pages
   PACKAGE_FILES_URL: https://wheels.privategpt.dev/packages/
+  PACKAGE_CONSTRAINTS_URL: https://wheels.privategpt.dev/constraints/
   platforms: linux/amd64,linux/arm64
 jobs:
   build-and-publish-package:
@@ -58,6 +59,12 @@ jobs:
 
       - name: Build package
         run: uv build
+
+      - name: Export locked constraints
+        run: |
+          uv export --frozen --all-extras --no-dev --no-emit-project \
+            --no-hashes --no-header --no-annotate --format requirements.txt \
+            -o "dist/private-gpt-${{ steps.version.outputs.version }}-constraints.txt"
 
       - name: Upload built distributions
         uses: actions/upload-artifact@v7
@@ -132,8 +139,9 @@ jobs:
 
       - name: Update package files
         run: |
-          mkdir -p site/packages
-          cp dist/* site/packages/
+          mkdir -p site/packages site/constraints
+          cp dist/*.whl dist/*.tar.gz site/packages/
+          cp dist/*-constraints.txt site/constraints/
 
       - name: Build package index
         run: |
@@ -154,6 +162,63 @@ jobs:
 
           git commit -m "package index ${{ needs.build-and-publish-package.outputs.version }}"
           git push origin "${PACKAGE_INDEX_BRANCH}"
+
+  build-offline-bundles:
+    needs: build-and-publish-package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install UV and set Python version
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.11"
+
+      - name: Download built distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Build offline bundle
+        shell: bash
+        run: |
+          uv run --no-project --python 3.11 --with pip \
+            python scripts/build_wheelhouse.py \
+            --project-wheel dist/private_gpt-${{ needs.build-and-publish-package.outputs.version }}-py3-none-any.whl \
+            --extra "${{ env.RELEASE_PACKAGE_EXTRA }}" \
+            --out-dir bundles
+
+      - name: Verify offline install
+        shell: bash
+        run: |
+          mkdir verify && cd verify
+          for f in ../bundles/*; do
+            case "$f" in *.zip) unzip -q "$f" ;; *) tar xzf "$f" ;; esac
+          done
+          cd private-gpt-*
+          export UV_TOOL_DIR="$RUNNER_TEMP/tools" UV_TOOL_BIN_DIR="$RUNNER_TEMP/bin"
+          uv tool install --offline --no-index --find-links wheelhouse --python 3.11 \
+            "private-gpt[${{ env.RELEASE_PACKAGE_EXTRA }}]==${{ needs.build-and-publish-package.outputs.version }}"
+          "$UV_TOOL_BIN_DIR/private-gpt" --help
+
+      - name: Upload bundle to GitHub release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" bundles/* --clobber
 
   build-and-push-image:
     needs: build-and-publish-package
@@ -244,6 +309,7 @@ jobs:
           python scripts/generate_homebrew_formula.py \
             --version "${{ needs.build-and-publish-package.outputs.version }}" \
             --source-url "${{ needs.build-and-publish-package.outputs.source_url }}" \
+            --constraints-url "${{ env.PACKAGE_CONSTRAINTS_URL }}private-gpt-${{ needs.build-and-publish-package.outputs.version }}-constraints.txt" \
             --sha256 "${{ needs.build-and-publish-package.outputs.source_sha256 }}" \
             --extra "${{ env.RELEASE_PACKAGE_EXTRA }}" \
             --package-files-url "${{ env.PACKAGE_FILES_URL }}" \
