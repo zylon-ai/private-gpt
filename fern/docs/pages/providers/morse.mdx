@@ -1,0 +1,100 @@
+---
+title: "Morse"
+description: "Configure PrivateGPT with Morse, a private OpenAI-compatible API for open-weight models with a privacy tier per request, and a separate local embeddings server."
+---
+
+[Morse](https://trymorse.ai/inference?src=gh-private-gpt) is a private, OpenAI-compatible inference API at `https://inference.trymorse.ai/v1`: 80+ open-weight models at a privacy tier you choose per request or per API key (Private, TEE or E2EE). A request no endpoint can meet is refused, never sent to a lower tier. Its enclave is open source and attestable ([morse-enclave](https://github.com/trymorse/morse-enclave)). PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+Morse serves chat models. This setup sends chat requests to Morse and keeps embeddings on your existing embedding setup, for example a local [Ollama](/providers/ollama) server, so your documents are embedded on your machine. It works with PrivateGPT's existing backend.
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and choose a model">
+    1. Create an API key in the [Morse console](https://console.trymorse.ai) and add credits.
+    2. Set `MORSE_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export MORSE_API_KEY="sk_morse_..."
+    ```
+
+    3. Choose a model. Model IDs are `lab/model`; list them with your key and use an exact ID from the response:
+
+    ```bash
+    curl https://inference.trymorse.ai/v1/models -H "Authorization: Bearer $MORSE_API_KEY"
+    ```
+
+    ```bash
+    export MORSE_MODEL="z-ai/glm-5.3-flash"
+    ```
+
+    See the [Morse API docs](https://trymorse.ai/inference/docs) for privacy tiers and parameters, and the [models page](https://trymorse.ai/inference/models) for prices.
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Skip this step if you already have an embeddings server. Otherwise, start Ollama and pull the embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    These examples use Ollama's OpenAI-compatible API at `http://localhost:11434/v1`, with the separate placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://inference.trymorse.ai/v1 \
+          OPENAI_API_KEY="$MORSE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$MORSE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://inference.trymorse.ai/v1 \
+          -e OPENAI_API_KEY="$MORSE_API_KEY" \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT="$MORSE_MODEL" \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`. Ollama must listen on an address reachable from the container.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://inference.trymorse.ai/v1 \
+          OPENAI_API_KEY="$MORSE_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$MORSE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+## Privacy tiers
+
+- **Private**: the model runs on a provider under a zero-data-retention agreement.
+- **TEE**: the model runs in a hardware enclave whose attestation Morse checks before passing the request on.
+- **E2EE**: the request is encrypted on your machine and opened only inside a verified enclave (needs Morse's local sidecar, [morse-seal](https://github.com/trymorse/morse-seal)).
+
+Set a floor per API key in the console, or per request as described in the [docs](https://trymorse.ai/inference/docs). Providers see Morse as the customer, not your account or IP address.
+
+## Models and capabilities
+
+- Use the model ID returned by `/v1/models` unchanged.
+- Streaming, tool calling and image input (as `data:` URLs) depend on the selected model. Reasoning models return their reasoning in `reasoning_content`.
+- Embeddings run on your own server. Chat prompts, including retrieved document excerpts, go to Morse at the privacy tier you chose.
