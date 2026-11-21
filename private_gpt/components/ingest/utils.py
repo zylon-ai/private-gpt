@@ -328,13 +328,6 @@ def extract_pdf_info(file_data: Path) -> dict[str, Any | None]:
                 except Exception:
                     return None
 
-            def has_images() -> bool | None:
-                """Check if the PDF contains images."""
-                try:
-                    return any(page.images for page in reader.pages)
-                except Exception:
-                    return None
-
             def has_annotations() -> bool | None:
                 """Check if the PDF contains annotations."""
                 try:
@@ -352,7 +345,6 @@ def extract_pdf_info(file_data: Path) -> dict[str, Any | None]:
             # Extract pdf information
             config["pages"] = extract_num_pages()
             config["is_encrypted"] = extract_encryption_status()
-            config["has_images"] = has_images()
 
             # Check for special PDFs
             config["has_forms"] = has_forms()

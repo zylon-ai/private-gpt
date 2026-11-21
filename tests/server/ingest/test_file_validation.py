@@ -30,7 +30,6 @@ def test_get_file_info_valid_pdf():
         mock_config.return_value = {
             "pages": 10,
             "is_encrypted": False,
-            "has_images": True,
             "has_forms": False,
             "has_annotations": False,
             "has_attachments": False,
@@ -45,7 +44,6 @@ def test_get_file_info_valid_pdf():
         assert file_info.actual_mime_type == "application/pdf"
         assert file_info.config["pages"] == 10
         assert not file_info.config["is_encrypted"]
-        assert file_info.config["has_images"] is True
         assert file_info.config["has_forms"] is False
         assert file_info.config["has_annotations"] is False
         assert file_info.config["has_attachments"] is False
