@@ -237,10 +237,16 @@ def detect_encoding(file_data: Path) -> str | None:
         max_multiplier = 8  # How many times we'll increase the chunk size
 
         with open(file_data, "rb") as file:
+            # Text only has NUL bytes in UTF-16 or UTF-32, which chardet
+            # recognises from the first chunk. Any other file with NUL bytes
+            # is binary (a PDF, an Office document, an image or audio), and
+            # chardet would scan all of it, at seconds per megabyte, without
+            # finding an encoding.
+            has_nul_bytes = b"\x00" in file.read(initial_chunk_size)
             chunk_size = initial_chunk_size
             position = 0
 
-            for _ in range(max_multiplier):
+            for _ in range(1 if has_nul_bytes else max_multiplier):
                 file.seek(position)
                 chunk = file.read(chunk_size)
 
@@ -257,7 +263,7 @@ def detect_encoding(file_data: Path) -> str | None:
                 chunk_size *= 2  # Double the chunk size
 
             # If still not confident, read the entire file
-            if not detector.done:
+            if not detector.done and not has_nul_bytes:
                 file.seek(0)
                 chunk = file.read()
                 detector.feed(chunk)
