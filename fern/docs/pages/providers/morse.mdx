@@ -87,7 +87,7 @@ Morse serves chat models. This setup sends chat requests to Morse and keeps embe
 
 ## Privacy tiers
 
-- **Private**: the model runs on a provider under a zero-data-retention agreement.
+- **Private**: the model runs on a model host whose terms say it keeps none of your messages.
 - **TEE**: the model runs in a hardware enclave whose attestation Morse checks before passing the request on.
 - **E2EE**: the request is encrypted on your machine and opened only inside a verified enclave (needs Morse's local sidecar, [morse-seal](https://github.com/trymorse/morse-seal)).
 
