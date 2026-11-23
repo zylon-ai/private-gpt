@@ -1,0 +1,150 @@
+---
+title: "WorldRouter"
+description: "Configure PrivateGPT with WorldRouter for Claude, GPT, Gemini, DeepSeek, Kimi and GLM chat models through one OpenAI-compatible base URL, with a separate embeddings server."
+---
+
+[WorldRouter](https://www.worldrouter.ai) is a hosted AI API gateway with an OpenAI-compatible endpoint at `https://inference-api.worldrouter.ai/v1`. It serves chat models from Anthropic, OpenAI and Google alongside DeepSeek, Moonshot Kimi and Zhipu GLM, so you can switch the model PrivateGPT answers with by changing a model ID. PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+WorldRouter serves chat models and does not serve embedding models. This setup sends chat requests to WorldRouter and keeps embeddings on your own embeddings server, for example a local [Ollama](/providers/ollama) instance.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ returns model IDs, without context lengths |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ❌ use a separate embeddings server |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+Tool calling, JSON-schema output and streaming were checked against the live API with `deepseek-v4-flash`, `claude-sonnet-5-5` and `gemini-4-neon`. Image input was checked with `claude-sonnet-5-5`, `gemini-4-neon` and `gpt-5.4`; `deepseek-v4-flash` does not take images.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and pick a chat model">
+    1. Sign in to WorldRouter and create a key on the [API Keys dashboard](https://www.worldrouter.ai/dashboard/api-keys).
+    2. Set `WORLDROUTER_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export WORLDROUTER_API_KEY="your-worldrouter-api-key"
+    ```
+
+    3. List the model IDs your key can call and use one of them unchanged:
+
+    ```bash
+    curl https://inference-api.worldrouter.ai/v1/models \
+      -H "Authorization: Bearer $WORLDROUTER_API_KEY"
+    ```
+
+    Model IDs, context windows and per-model prices are on the [models page](https://www.worldrouter.ai/models), and setup notes are in the [WorldRouter quickstart](https://www.worldrouter.ai/docs/quickstart).
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Skip this step if you already have an embeddings server. Otherwise, start Ollama and pull an embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    The examples below use Ollama's OpenAI-compatible API at `http://localhost:11434/v1` with the placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://inference-api.worldrouter.ai/v1 \
+          OPENAI_API_KEY="$WORLDROUTER_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=deepseek-v4-flash \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://inference-api.worldrouter.ai/v1 \
+          -e OPENAI_API_KEY="$WORLDROUTER_API_KEY" \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT=deepseek-v4-flash \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://inference-api.worldrouter.ai/v1 \
+          OPENAI_API_KEY="$WORLDROUTER_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=deepseek-v4-flash \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+`/v1/models` returns model IDs without a context length and there is no `/tokenize` endpoint, so set `context_window` explicitly. The values below are the context windows listed on the WorldRouter models page.
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: deepseek-v4-flash
+
+models:
+  - name: deepseek-v4-flash
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+
+  - name: claude-sonnet-5-5
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+
+  - name: gemini-4-neon
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+```
+
+Run with the profile:
+
+```bash
+OPENAI_API_BASE=https://inference-api.worldrouter.ai/v1 \
+  OPENAI_API_KEY="$WORLDROUTER_API_KEY" \
+  OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+  OPENAI_EMBEDDING_API_KEY=ollama \
+  PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+  PGPT_PROFILES=model \
+  uv run private-gpt serve
+```
+
+---
+
+## Notes
+
+- **Model IDs** are unprefixed (`deepseek-v4-flash`, `claude-sonnet-5-5`, `gemini-4-neon`) and are passed as-is.
+- **Images**: pick a model that takes images, such as `claude-sonnet-5-5` or `gemini-4-neon`, if your documents or prompts include them; `deepseek-v4-flash` is text-only.
+- **Embeddings stay on your server**, but retrieved document excerpts that PrivateGPT puts into a chat prompt are sent to the hosted API.
