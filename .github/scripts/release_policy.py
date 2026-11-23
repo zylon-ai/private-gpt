@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate release-line ownership and forward-port merged fixes without release metadata.
 
-Copied into component repos by automation/sync_release_policy.py. Uses only Python's
+Shared with component repos through zylon-base-template. Uses only Python's
 standard library, git and gh; never installs or runs code from the source PR.
 """
 import argparse
@@ -105,7 +105,13 @@ def forward_port(event, policy):
         if not re.fullmatch(r'[0-9a-f]{40}', first):
             raise ValueError('Invalid first PR commit SHA')
         git('fetch', 'origin', source_head, first)
-        base = first + '^1'
+        # A rebase can reuse the original commits. In that case the merge-base
+        # would hide all but the last commit, so reject before comparing patches.
+        if subprocess.run(['git', 'merge-base', '--is-ancestor', first, parent],
+                          capture_output=True, check=False).returncode == 0:
+            raise ValueError('Merged commit does not contain the complete PR patch; forward-port manually.')
+        # Exclude target commits merged into the hotfix before its squash merge.
+        base = git('merge-base', parent, source_head).decode().strip()
         whole_pr = git('diff', '--binary', base, source_head)
         merged = git('diff', '--binary', parent, sha)
         if git('patch-id', '--stable', input=whole_pr) != git('patch-id', '--stable', input=merged):

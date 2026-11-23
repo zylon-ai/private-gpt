@@ -39,6 +39,8 @@ Prefer fixing `main` first and cherry-picking into maintenance. A merged hotfix
 PR into `release/X.Y` also opens an independent code-only forward-port PR onto
 `main`; it never merges release-branch ancestry. Release PRs are skipped.
 Use squash merges or merge commits, not multi-commit rebase merges, for hotfix PRs.
+Squashed hotfixes may include merges from their maintenance target; those upstream
+changes are excluded when checking the complete hotfix patch.
 Direct pushes do not create forward-port PRs: use PRs for maintenance fixes.
 Conflicts and edits to files mixing code/dependencies with version metadata stop
 for manual forward-porting instead of silently dropping part of a fix. Check the

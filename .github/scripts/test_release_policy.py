@@ -154,6 +154,39 @@ class ReleasePolicyTests(unittest.TestCase):
             self.assertEqual(Path('second.txt').read_text(), 'second fix\n')
             self.assertEqual(Path('version.txt').read_text(), '1.3.0\n')
 
+    def test_squash_after_merging_target_excludes_upstream_changes(self):
+        real_run = subprocess.run
+        def run(args, **kwargs):
+            if args[:3] == ['gh', 'pr', 'create']:
+                return subprocess.CompletedProcess(args, 0)
+            return real_run(args, **kwargs)
+        with self.git_repo() as (first, _):
+            policy.git('checkout', '-b', 'target', first + '^1')
+            Path('upstream.txt').write_text('maintenance-only change\n')
+            policy.git('add', '.')
+            policy.git('commit', '-m', 'fix: unrelated target change')
+            policy.git('checkout', 'release/1.2')
+            policy.git('merge', '--no-edit', 'target')
+            Path('second.txt').write_text('second fix\n')
+            policy.git('add', '.')
+            policy.git('commit', '-m', 'fix: second part')
+            source = policy.git('rev-parse', 'HEAD').decode().strip()
+            policy.git('push', 'origin', 'release/1.2')
+            policy.git('checkout', 'target')
+            policy.git('merge', '--squash', 'release/1.2')
+            policy.git('commit', '-m', 'fix: complete hotfix')
+            merged = policy.git('rev-parse', 'HEAD').decode().strip()
+            policy.git('push', 'origin', 'target')
+            policy.git('checkout', 'main')
+            responses = [[], {'commits': 3, 'head': {'sha': source}}, [{'sha': first}]]
+            with patch.dict(os.environ, {'GITHUB_REPOSITORY': 'example/repo'}), \
+                    patch.object(policy, 'gh', side_effect=responses), \
+                    patch.object(subprocess, 'run', side_effect=run):
+                policy.forward_port(self.event(merged), {'trunk': 'main', 'metadata': ['version.txt']})
+            self.assertEqual(Path('code.txt').read_text(), 'fixed\n')
+            self.assertEqual(Path('second.txt').read_text(), 'second fix\n')
+            self.assertFalse(Path('upstream.txt').exists())
+
     def test_release_pr_skipped(self):
         event = self.event('a'*40)
         event['pull_request']['head']['ref'] = 'release-please--branches--release/1.2'
