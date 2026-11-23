@@ -36,3 +36,12 @@ def test_zero_temperature_is_kept(factory_cls: Any) -> None:
 @pytest.mark.parametrize("factory_cls", FACTORIES)
 def test_default_temperature_is_unchanged(factory_cls: Any) -> None:
     assert _temperature(factory_cls, SamplingParams()) == 0.1
+
+
+@pytest.mark.parametrize("factory_cls", FACTORIES)
+def test_request_timeout_setting_is_applied(factory_cls: Any) -> None:
+    settings = _settings()
+    settings.openai.request_timeout = 600.0
+    config = LLMModelConfig(name="mock", mode="openailike")
+    llm, _ = factory_cls(settings)._create_llm(config)
+    assert float(llm.timeout) == 600.0

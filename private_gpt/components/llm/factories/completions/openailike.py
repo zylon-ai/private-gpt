@@ -59,7 +59,7 @@ class OpenAILikeCompletionsFactory(LLMFactory):
             if prompt_style
             else None,
             tokenizer=model_config.tokenizer,
-            timeout=120.0,
+            timeout=float(self.openai_settings.request_timeout or 120),
             reuse_client=False,
             logprobs=False,
             is_function_calling_model=bool(model_config.support_tools),
