@@ -80,6 +80,31 @@ brave:
 
 ---
 
+### Search with Parallel
+
+Set `web_search.provider: parallel` to get public sources and excerpts from
+Parallel. This sends search queries to `https://mcp.parallel.ai/mcp`.
+Anonymous search is available within the free-tier limits. Set
+`PGPT_PARALLEL_API_KEY` if your deployment needs higher limits.
+
+Install `private-gpt[tool-mcp]` alongside your web tools dependencies if your
+installation does not already include the MCP extra. The `tools` and `core`
+extras include it.
+
+```yaml
+web_fetch:
+  enabled: true
+
+web_search:
+  enabled: true
+  provider: parallel
+  processor: simple_text
+```
+
+With `simple_text`, the tool returns the provider's excerpts directly. To try
+it on your running server, send `{"query":"NASA Voyager interstellar mission"}`
+to `POST /v1/tools/web-search`, or enable **Web** in a Workbench chat.
+
 ### Settings
 
 | Setting | Description |
@@ -87,7 +112,7 @@ brave:
 | `web_fetch.enabled` | Enables URL fetching and text extraction. |
 | `web_fetch.timeout_seconds` | Timeout for fetching a page. |
 | `web_search.enabled` | Enables web search. |
-| `web_search.provider` | Search provider. Current built-in options are `brave` and `mock`. |
+| `web_search.provider` | Search provider. Built-in options are `brave`, `mock`, and `parallel`. |
 | `web_search.processor` | Post-processing strategy for results. |
 | `web_search.num_links` | Maximum number of fetched search results. |
 | `web_search.mode_quality` | Preset that controls the fast vs accurate parameter block. |
@@ -95,3 +120,5 @@ brave:
 | `web_search.context_token` | Optional token budget used by the result processor. `0` disables the limit. |
 | `brave.api_key` | Brave Search API key. Required when using `provider: brave`. |
 | `brave.rate_limit` | Minimum seconds between Brave API requests. |
+| `parallel.api_key` | Optional Parallel API key. |
+| `parallel.timeout` | Timeout in seconds for searching with Parallel. |

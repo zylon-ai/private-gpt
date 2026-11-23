@@ -6,10 +6,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
 
-from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.ingest.utils import get_extension, get_file_name
 from private_gpt.components.storage.s3_helper import S3Helper
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -539,6 +537,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         A worker that dies mid-task never marks its result as ready; without a
         bound the calling request would hang forever.
         """
+        from celery.exceptions import TimeoutError as CeleryTimeoutError
+
+        from private_gpt.celery.result import wait_for_celery_result
+
         try:
             return wait_for_celery_result(result, timeout=timeout)
         except CeleryTimeoutError:

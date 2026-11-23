@@ -97,7 +97,9 @@ def test_build_clients_serializes_local_path_clients(
 ) -> None:
     # Only the sync client's wiring is under test here.
     monkeypatch.setattr(
-        QdrantClientBuilder, "clean_lock", staticmethod(lambda db_dir: None)
+        QdrantClientBuilder,
+        "release_lock",
+        staticmethod(lambda client, db_dir: None),
     )
     monkeypatch.setattr(
         "private_gpt.components.vector_store.qdrant_client_builder.AsyncQdrantClient",
@@ -113,5 +115,21 @@ def test_build_clients_serializes_local_path_clients(
         assert "upsert" in vars(local)
         assert "scroll" in vars(local)
         assert local.scroll.__wrapped__.__func__ is type(local).scroll
+    finally:
+        clients.close()
+
+
+def test_build_clients_local_path_holds_no_open_lock_file(tmp_path: Path) -> None:
+    # Windows cannot delete a file another handle has open, so removing the
+    # shared .lock while a client still holds it fails with WinError 32.
+    settings = Mock()
+    settings.qdrant.get_parameters.return_value = {"path": str(tmp_path / "qdrant")}
+
+    clients = QdrantClientBuilder.build_clients(settings)
+    try:
+        for client in (clients.client, clients.aclient):
+            flock = getattr(client._client, "_flock_file", None)
+            assert flock is None or flock.closed
+        assert not (tmp_path / "qdrant" / ".lock").exists()
     finally:
         clients.close()

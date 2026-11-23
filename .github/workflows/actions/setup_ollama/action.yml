@@ -1,0 +1,116 @@
+name: "Setup Ollama"
+description: "Install Ollama, start it on 127.0.0.1:11434 and pull the given models"
+inputs:
+  version:
+    description: "Ollama release tag"
+    required: false
+    default: "v0.40.16"
+  models:
+    description: "Space-separated models to pull"
+    required: false
+    default: "qwen3:0.6b all-minilm"
+
+runs:
+  using: composite
+  steps:
+    - name: Set model directory
+      shell: bash
+      run: echo "OLLAMA_MODELS=${RUNNER_TEMP}/ollama-models" >> "$GITHUB_ENV"
+
+    - name: Cache models
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/ollama-models
+        key: ollama-models-${{ runner.os }}-${{ inputs.models }}
+
+    - name: Install Ollama (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        arch=amd64; [ "${{ runner.arch }}" = "ARM64" ] && arch=arm64
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tar.zst" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-linux-${arch}.tar.zst"
+        sudo tar --zstd -xf "$RUNNER_TEMP/ollama.tar.zst" -C /usr/local
+        nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/ollama.tgz" \
+          "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-darwin.tgz"
+        mkdir -p "$RUNNER_TEMP/ollama"
+        tar xzf "$RUNNER_TEMP/ollama.tgz" -C "$RUNNER_TEMP/ollama"
+        echo "$RUNNER_TEMP/ollama" >> "$GITHUB_PATH"
+        nohup "$RUNNER_TEMP/ollama/ollama" serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+
+    - name: Install Ollama (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $zip = Join-Path $env:RUNNER_TEMP "ollama.zip"
+        $dir = Join-Path $env:RUNNER_TEMP "ollama"
+        curl.exe -fsSL --retry 5 --retry-all-errors -o $zip "https://github.com/ollama/ollama/releases/download/${{ inputs.version }}/ollama-windows-amd64.zip"
+        if ($LASTEXITCODE -ne 0) { throw "Ollama download failed" }
+        Expand-Archive -Path $zip -DestinationPath $dir
+        Add-Content -Path $env:GITHUB_PATH -Value $dir
+
+    - name: Pull models
+      shell: python
+      env:
+        OLLAMA_PULL_MODELS: ${{ inputs.models }}
+      run: |
+        import json, os, sys, time, urllib.request
+
+        base = "http://127.0.0.1:11434"
+
+        def call(path, body=None, timeout=10):
+            data = json.dumps(body).encode() if body is not None else None
+            req = urllib.request.Request(base + path, data=data, method="POST" if data else "GET")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode()
+
+        proc = None
+        if os.name == "nt":
+            import subprocess
+            exe = os.path.join(os.environ["RUNNER_TEMP"], "ollama", "ollama.exe")
+            log = open(os.path.join(os.environ["RUNNER_TEMP"], "ollama.log"), "ab")
+            flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            env = {**os.environ, "OLLAMA_HOST": "127.0.0.1:11434"}
+            try:
+                proc = subprocess.Popen([exe, "serve"], stdout=log, stderr=log, env=env,
+                                        creationflags=flags | subprocess.CREATE_BREAKAWAY_FROM_JOB)
+            except OSError as exc:
+                print(f"breakaway not allowed ({exc}); starting inside the job")
+                proc = subprocess.Popen([exe, "serve"], stdout=log, stderr=log, env=env,
+                                        creationflags=flags)
+            print(f"started ollama pid={proc.pid}")
+
+        deadline = time.monotonic() + 300
+        while True:
+            try:
+                print(call("/api/version"))
+                break
+            except OSError as exc:
+                if proc is not None and proc.poll() is not None:
+                    sys.exit(f"Ollama exited with code {proc.returncode}")
+                if time.monotonic() > deadline:
+                    sys.exit(f"Ollama did not answer: {exc}")
+                time.sleep(2)
+
+        for model in os.environ["OLLAMA_PULL_MODELS"].split():
+            for attempt in range(1, 4):
+                try:
+                    print(call("/api/pull", {"model": model, "stream": False}, timeout=900))
+                    break
+                except OSError as exc:
+                    print(f"pull {model} failed (attempt {attempt}): {exc}")
+                    if attempt == 3:
+                        raise
+                    time.sleep(10)
+        print(call("/v1/models"))
+
+    - name: Ollama logs
+      if: failure()
+      shell: bash
+      run: cat "$RUNNER_TEMP"/ollama*.log || true

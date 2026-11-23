@@ -82,13 +82,13 @@ class QdrantClientBuilder:
             db_dir = config["path"]
 
             # Local Qdrant uses one lock file for sync and async clients.
-            # Remove it between client construction using the resolved path.
+            # Release it between client construction using the resolved path.
             client = QdrantClient(**config)
             QdrantClientBuilder.serialize_local_access(client)
-            QdrantClientBuilder.clean_lock(db_dir=db_dir)
+            QdrantClientBuilder.release_lock(client, db_dir=db_dir)
 
             aclient = AsyncQdrantClient(**config)
-            QdrantClientBuilder.clean_lock(db_dir=db_dir)
+            QdrantClientBuilder.release_lock(aclient, db_dir=db_dir)
 
         else:
             client = QdrantClient(**config)
@@ -132,6 +132,18 @@ class QdrantClientBuilder:
     @staticmethod
     def is_local_path(config: dict[str, Any]) -> bool:
         return config.get("path") is not None
+
+    @staticmethod
+    def release_lock(client: QdrantClient | AsyncQdrantClient, db_dir: str) -> None:
+        # Windows cannot delete a file that is still open, so the client's
+        # handle on .lock has to be unlocked and closed first.
+        flock = getattr(getattr(client, "_client", None), "_flock_file", None)
+        if flock is not None and not flock.closed:
+            import portalocker
+
+            portalocker.unlock(flock)
+            flock.close()
+        QdrantClientBuilder.clean_lock(db_dir=db_dir)
 
     @staticmethod
     def clean_lock(db_dir: str) -> None:

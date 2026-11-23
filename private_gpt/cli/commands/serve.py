@@ -1,7 +1,9 @@
 import logging
 import os
 import signal
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 import uvicorn
@@ -11,9 +13,54 @@ from private_gpt.settings.settings_loader import active_profiles
 
 logger = logging.getLogger(__name__)
 
+_IS_WINDOWS = os.name == "nt"
+
 PID_FILE_OPTION = typer.Option(
     None, "--pid-file", help="Write PID to file (for systemd / launchd)"
 )
+
+
+_ERROR_ACCESS_DENIED = 5
+
+
+def _windows_kernel32() -> tuple[Any, Callable[[], int]]:
+    import ctypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # ty:ignore[unresolved-attribute]
+    return kernel32, ctypes.get_last_error  # ty:ignore[unresolved-attribute]
+
+
+def _windows_pid_alive(pid: int) -> bool:
+    import ctypes
+
+    process_query_limited_information = 0x1000
+    still_active = 259
+    kernel32, last_error = _windows_kernel32()
+    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    if not handle:
+        # A live process owned by another user (e.g. an elevated server)
+        # refuses the handle; only a missing PID means the file is stale.
+        return last_error() == _ERROR_ACCESS_DENIED
+    try:
+        exit_code = ctypes.c_ulong()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return False
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _pid_alive(pid: int) -> bool:
+    # On Windows os.kill(pid, 0) does not probe: it signals or terminates pid.
+    if _IS_WINDOWS:
+        return _windows_pid_alive(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def serve_command(
@@ -37,11 +84,11 @@ def serve_command(
     if pid_file and pid_file.exists():
         try:
             existing_pid = int(pid_file.read_text().strip())
-            os.kill(existing_pid, 0)
+        except ValueError:
+            existing_pid = None  # corrupt PID file, treat as stale
+        if existing_pid is not None and _pid_alive(existing_pid):
             typer.echo(f"Server is already running with PID {existing_pid}", err=True)
             raise SystemExit(1)
-        except ProcessLookupError:
-            pass  # stale PID file
 
     if pid_file:
         pid_file.parent.mkdir(parents=True, exist_ok=True)

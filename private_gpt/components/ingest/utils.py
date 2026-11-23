@@ -78,6 +78,10 @@ def get_guest_mime_type(file_data: Path) -> str | None:
 
 
 def get_actual_mime_type(file_data: Path) -> str | None:
+    from private_gpt.utils.mime import is_magic_available
+
+    if not is_magic_available():
+        return None
     try:
         import magic  # ty:ignore[unresolved-import]
 
