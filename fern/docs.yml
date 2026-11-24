@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: TeamoRouter
+            slug: providers/teamorouter
+            path: ./docs/pages/providers/teamorouter.mdx
       - section: Integrations
         skip-slug: true
         contents:

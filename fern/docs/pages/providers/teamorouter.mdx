@@ -1,0 +1,153 @@
+---
+title: "TeamoRouter"
+description: "Configure PrivateGPT with TeamoRouter for GLM, Kimi, DeepSeek, Qwen, Claude, GPT and Gemini chat models through one OpenAI-compatible base URL, with a separate embeddings server."
+---
+
+[TeamoRouter](https://teamorouter.com) is a hosted AI API gateway with an OpenAI-compatible endpoint at `https://api.teamorouter.com/v1`. It serves GLM, Kimi, DeepSeek, Qwen and MiniMax models alongside Claude, GPT and Gemini, so you can switch the model PrivateGPT answers with by changing a model ID. PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+TeamoRouter serves chat models and does not serve embedding models. This setup sends chat requests to TeamoRouter and keeps embeddings on your own embeddings server, for example a local [Ollama](/providers/ollama) instance.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ needs your key; no context length in the response |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ❌ use a separate embeddings server |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+Tool calling and streaming were checked against the live API with `glm-5.3`, `deepseek-v4-flash`, `claude-sonnet-5-5` and `gpt-6.2-astra`. JSON-schema output follows the schema on `gpt-6.2-astra`; `glm-5.3` accepts the parameter but answers in plain text, so validate its output. Image input (base64 data URLs) was checked with `gpt-6.2-astra` and `claude-sonnet-5-5`; `glm-5.3` rejects images.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and pick a chat model">
+    1. Sign up at [teamorouter.com](https://teamorouter.com) and create an API key on the API Keys page of the dashboard.
+    2. Set `TEAMOROUTER_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export TEAMOROUTER_API_KEY="your-teamorouter-api-key"
+    ```
+
+    3. List the model IDs and use one of them unchanged. The pricing endpoint needs no key and also returns each model's context window:
+
+    ```bash
+    curl https://api.teamorouter.com/v1/models/pricing \
+      | jq -r '.models[] | "\(.id)\t\(.context_window)"'
+    ```
+
+    Setup notes are in the [TeamoRouter docs](https://teamorouter.com/docs), and per-model prices are on the [models page](https://teamorouter.com/models).
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Skip this step if you already have an embeddings server. Otherwise, start Ollama and pull an embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    The examples below use Ollama's OpenAI-compatible API at `http://localhost:11434/v1` with the placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.teamorouter.com/v1 \
+          OPENAI_API_KEY="$TEAMOROUTER_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=glm-5.3 \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.teamorouter.com/v1 \
+          -e OPENAI_API_KEY="$TEAMOROUTER_API_KEY" \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT=glm-5.3 \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.teamorouter.com/v1 \
+          OPENAI_API_KEY="$TEAMOROUTER_API_KEY" \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT=glm-5.3 \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+`/v1/models` returns model IDs without a context length and there is no `/tokenize` endpoint, so set `context_window` explicitly. The values below are the context windows listed by the pricing endpoint.
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: glm-5.3
+
+models:
+  - name: glm-5.3
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+
+  - name: gpt-6.2-astra
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+
+  - name: claude-sonnet-5-5
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+```
+
+Run with the profile:
+
+```bash
+OPENAI_API_BASE=https://api.teamorouter.com/v1 \
+  OPENAI_API_KEY="$TEAMOROUTER_API_KEY" \
+  OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+  OPENAI_EMBEDDING_API_KEY=ollama \
+  PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+  PGPT_PROFILES=model \
+  uv run private-gpt serve
+```
+
+---
+
+## Notes
+
+- **Model IDs** are bare names without a vendor prefix (`glm-5.3`, `deepseek-v4-flash`, `claude-sonnet-5-5`); pass them unchanged.
+- **Embeddings stay on your server**, but retrieved document excerpts that PrivateGPT puts into a chat prompt are sent to the hosted API.
+- TeamoRouter also exposes an Anthropic Messages-compatible endpoint at `https://api.teamorouter.com`. PrivateGPT uses the OpenAI-compatible one, and Claude models are available on it too.
