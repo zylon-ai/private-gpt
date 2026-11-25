@@ -131,11 +131,12 @@ async def mock_llm(
     indirect=True,
 )
 @pytest.mark.parametrize(
-    ("tool_type", "calls_provider"),
+    ("tool_type", "expected_error"),
     [
-        ("web_search_v1", True),
-        ("brave_web_search_v1", True),
-        ("parallel_web_search_v1", False),
+        ("web_search_v1", None),
+        ("brave_web_search_v1", None),
+        ("parallel_web_search_v1", "differs from the expected provider"),
+        ("web_search_v0", "Review the current provider"),
     ],
 )
 async def test_messages_honors_the_search_provider_in_the_tool_type(
@@ -143,7 +144,7 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
     injector: MockInjector,
     monkeypatch: pytest.MonkeyPatch,
     tool_type: str,
-    calls_provider: bool,
+    expected_error: str | None,
 ) -> None:
     query = "Cassini spacecraft"
     await mock_llm(
@@ -179,13 +180,13 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
     )
 
     assert response.status_code == 200, response.text
-    if calls_provider:
+    if expected_error is None:
         search.assert_awaited_once()
         assert search.await_args.args[0] == query
         assert "Cassini excerpt" in response.text
     else:
         search.assert_not_awaited()
-        assert "differs from the expected provider" in response.text
+        assert expected_error in response.text
 
 
 @pytest.mark.anyio

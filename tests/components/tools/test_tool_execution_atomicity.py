@@ -20,6 +20,7 @@ from private_gpt.components.tools.remote_execution import (
     ToolExecutionInterceptor,
     ToolExecutionRequest,
     ToolExecutionResponse,
+    build_rebuild_metadata,
     execute_tool_request,
 )
 from private_gpt.components.tools.tool_execution_outcome import ToolExecutionFailure
@@ -145,8 +146,18 @@ async def test_local_and_celery_schedulers_return_the_same_error_tool_result(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("tool_type", "expected_error"),
+    [
+        ("parallel_web_search_v1", "differs from the expected provider"),
+        ("web_search_v0", "Review the current provider"),
+    ],
+)
 async def test_worker_honors_the_search_provider_in_a_queued_tool(
-    injector: MockInjector, monkeypatch: pytest.MonkeyPatch
+    injector: MockInjector,
+    monkeypatch: pytest.MonkeyPatch,
+    tool_type: str,
+    expected_error: str,
 ) -> None:
     task_module = importlib.import_module(
         "private_gpt.celery.tasks.tools.tool_run_task"
@@ -160,13 +171,21 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
             }
         }
     )
+    spec = await injector.get(web_search_builder.WebSearchToolBuilder).build_tool(
+        type=tool_type
+    )
+    if tool_type == "web_search_v0":
+        assert spec.execution_metadata is not None
+        # An older API recognizes v0 as web search and queues the generic rebuild.
+        spec.execution_metadata = build_rebuild_metadata(
+            web_search_builder.rebuild_web_search_tool,
+            spec.execution_metadata.rebuild_kwargs,
+        )
     request = ToolExecutionRequest(
         tool_id="search-1",
         tool_name="web_search",
         tool_kwargs={"query": "Cassini spacecraft"},
-        tool_spec=await injector.get(
-            web_search_builder.WebSearchToolBuilder
-        ).build_tool(type="parallel_web_search_v1"),
+        tool_spec=spec,
     )
     worker_injector = MockInjector()
     worker_injector.bind_settings(
@@ -193,7 +212,7 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
 
     search.assert_not_awaited()
     assert isinstance(result.outcome, ToolExecutionFailure)
-    assert "differs from the expected provider" in result.outcome.error.message
+    assert expected_error in result.outcome.error.message
 
 
 @pytest.mark.anyio

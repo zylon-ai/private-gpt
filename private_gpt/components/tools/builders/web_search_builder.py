@@ -9,6 +9,7 @@ from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     WEB_SEARCH_TOOL_NAME,
     WEB_SEARCH_TOOL_PROVIDERS,
+    WEB_SEARCH_WORKBENCH_LEGACY_TYPE,
 )
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
@@ -48,11 +49,17 @@ class WebSearchToolBuilder:
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
         expected_provider = WEB_SEARCH_TOOL_PROVIDERS.get(type)
+        legacy_workbench = type == WEB_SEARCH_WORKBENCH_LEGACY_TYPE
 
         async def validate_search() -> None:
             await self.web_search_service.validate()
 
         async def run_tool(query: str) -> list[ResultContentBlockType]:
+            if legacy_workbench:
+                raise ValueError(
+                    "Workbench could not identify the web search provider. "
+                    "Review the current provider before enabling search again."
+                )
             if validate == ToolValidationMode.LAZY:
                 # It is not validated because that would imply another call;
                 # it is validated directly by making the query.
@@ -76,8 +83,8 @@ class WebSearchToolBuilder:
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(
-                rebuild_pinned_web_search_tool
-                if expected_provider is not None
+                rebuild_workbench_web_search_tool
+                if expected_provider is not None or legacy_workbench
                 else rebuild_web_search_tool,
                 {
                     "model_id": model_id,
@@ -96,7 +103,6 @@ async def rebuild_web_search_tool(**kwargs: Any) -> ToolSpec:
     return await builder.build_tool(**cast(Any, kwargs))
 
 
-async def rebuild_pinned_web_search_tool(**kwargs: Any) -> ToolSpec:
-    # This entry point is deliberately distinct so older workers cannot
-    # rebuild a provider-pinned tool as generic web search.
+async def rebuild_workbench_web_search_tool(**kwargs: Any) -> ToolSpec:
+    # Older workers cannot rebuild these requests as unrestricted web search.
     return await rebuild_web_search_tool(**kwargs)

@@ -7325,7 +7325,7 @@
       }
       if (web?.enabled) {
         if (web.search) {
-          const type = web.consent === "legacy" ? "web_search_v1" : `${web.consent}_web_search_v1`;
+          const type = web.consent === "legacy" ? "web_search_v0" : `${web.consent}_web_search_v1`;
           tools.push({ name: "web_search", type });
         }
         if (web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });

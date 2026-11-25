@@ -8,6 +8,8 @@ DATABASE_QUERY_TOOL_NAME = "database_query"
 WEB_FETCH_TOOL_NAME = "web_fetch"
 WEB_FETCH_LEGACY_TOOL_NAMES = ["web_extract"]
 WEB_SEARCH_TOOL_NAME = "web_search"
+# Older backends recognize this as generic search. Updated executors require a provider.
+WEB_SEARCH_WORKBENCH_LEGACY_TYPE = "web_search_v0"
 WEB_SEARCH_TOOL_PROVIDERS = {
     "brave_web_search_v1": "brave",
     "mock_web_search_v1": "mock",
