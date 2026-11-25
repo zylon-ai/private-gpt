@@ -59,8 +59,8 @@ separately by `web_fetch.enabled`.
 
 Workbench starts new chats with Web off. Open the chat’s **Tools** menu to see
 the provider and enable Web. A query is sent to `https://mcp.parallel.ai/mcp`
-when a model actually calls `web_search_v1`, or when an API client explicitly
-calls `POST /v1/tools/web-search` with a query. A model-generated query can
+when a model actually calls the built-in search tool or when an API client
+explicitly calls `POST /v1/tools/web-search` with a query. A model-generated query can
 include information from the conversation. `GET /v1/tools/web-capabilities`
 reports the effective provider and local tool availability without sending a
 search query.

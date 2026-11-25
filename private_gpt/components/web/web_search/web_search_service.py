@@ -65,8 +65,21 @@ class WebSearchService:
         logger.debug("WebSearchService initialized successfully")
 
     async def search(
-        self, query: str, model_id: str | None = None, **kwargs: Any
+        self,
+        query: str,
+        model_id: str | None = None,
+        *,
+        expected_provider: str | None = None,
+        **kwargs: Any,
     ) -> list[WebSearchResult]:
+        if (
+            expected_provider is not None
+            and self._settings.web_search.provider != expected_provider
+        ):
+            raise ValueError(
+                "The backend's web search provider differs from the expected provider. "
+                "Review the current provider before enabling search again."
+            )
         await self.validate()
 
         provider = type(self._provider).__name__

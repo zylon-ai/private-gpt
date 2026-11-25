@@ -6,7 +6,10 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
-from private_gpt.components.tools.tool_names import WEB_SEARCH_TOOL_NAME
+from private_gpt.components.tools.tool_names import (
+    WEB_SEARCH_TOOL_NAME,
+    WEB_SEARCH_TOOL_PROVIDERS,
+)
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.components.web.web_search.web_search_service import WebSearchService
@@ -44,6 +47,8 @@ class WebSearchToolBuilder:
         validate: ToolValidationMode = ToolValidationMode.LAZY,
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
+        expected_provider = WEB_SEARCH_TOOL_PROVIDERS.get(type)
+
         async def validate_search() -> None:
             await self.web_search_service.validate()
 
@@ -53,7 +58,9 @@ class WebSearchToolBuilder:
                 # it is validated directly by making the query.
                 pass
 
-            results = await self.web_search_service.search(query, model_id=model_id)
+            results = await self.web_search_service.search(
+                query, model_id=model_id, expected_provider=expected_provider
+            )
             return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 
         if validate == ToolValidationMode.EAGER:
@@ -69,7 +76,9 @@ class WebSearchToolBuilder:
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(
-                rebuild_web_search_tool,
+                rebuild_pinned_web_search_tool
+                if expected_provider is not None
+                else rebuild_web_search_tool,
                 {
                     "model_id": model_id,
                     "name": name,
@@ -85,3 +94,9 @@ class WebSearchToolBuilder:
 async def rebuild_web_search_tool(**kwargs: Any) -> ToolSpec:
     builder = get_global_injector().get(WebSearchToolBuilder)
     return await builder.build_tool(**cast(Any, kwargs))
+
+
+async def rebuild_pinned_web_search_tool(**kwargs: Any) -> ToolSpec:
+    # This entry point is deliberately distinct so older workers cannot
+    # rebuild a provider-pinned tool as generic web search.
+    return await rebuild_web_search_tool(**kwargs)

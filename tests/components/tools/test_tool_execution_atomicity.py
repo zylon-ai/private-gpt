@@ -15,6 +15,7 @@ import pytest
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
+from private_gpt.components.tools.builders import web_search_builder
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionInterceptor,
     ToolExecutionRequest,
@@ -23,6 +24,8 @@ from private_gpt.components.tools.remote_execution import (
 )
 from private_gpt.components.tools.tool_execution_outcome import ToolExecutionFailure
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
+from private_gpt.components.web.web_search.providers.brave import BraveSearchProvider
+from tests.fixtures.mock_injector import MockInjector
 
 if TYPE_CHECKING:
     from private_gpt.components.tools.remote_execution import (
@@ -139,6 +142,58 @@ async def test_local_and_celery_schedulers_return_the_same_error_tool_result(
         local, "boom: executor crashed", exception_type="RuntimeError"
     )
     assert local.model_dump(mode="json") == remote.model_dump(mode="json")
+
+
+@pytest.mark.anyio
+async def test_worker_honors_the_search_provider_in_a_queued_tool(
+    injector: MockInjector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task_module = importlib.import_module(
+        "private_gpt.celery.tasks.tools.tool_run_task"
+    )
+    injector.bind_settings(
+        {
+            "web_search": {
+                "enabled": True,
+                "provider": "parallel",
+                "processor": "simple_text",
+            }
+        }
+    )
+    request = ToolExecutionRequest(
+        tool_id="search-1",
+        tool_name="web_search",
+        tool_kwargs={"query": "Cassini spacecraft"},
+        tool_spec=await injector.get(
+            web_search_builder.WebSearchToolBuilder
+        ).build_tool(type="parallel_web_search_v1"),
+    )
+    worker_injector = MockInjector()
+    worker_injector.bind_settings(
+        {
+            "web_search": {
+                "enabled": True,
+                "provider": "brave",
+                "processor": "simple_text",
+            },
+            "brave": {"api_key": "fixture-key"},
+        }
+    )
+    monkeypatch.setattr(
+        web_search_builder, "get_global_injector", lambda: worker_injector.test_injector
+    )
+    search = AsyncMock()
+    monkeypatch.setattr(BraveSearchProvider, "make_query", search)
+
+    result = ToolExecutionResponse.model_validate(
+        await task_module.tool_run_task.run(
+            request_data=request.model_dump(mode="json")
+        )
+    )
+
+    search.assert_not_awaited()
+    assert isinstance(result.outcome, ToolExecutionFailure)
+    assert "differs from the expected provider" in result.outcome.error.message
 
 
 @pytest.mark.anyio

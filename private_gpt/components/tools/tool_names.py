@@ -8,6 +8,11 @@ DATABASE_QUERY_TOOL_NAME = "database_query"
 WEB_FETCH_TOOL_NAME = "web_fetch"
 WEB_FETCH_LEGACY_TOOL_NAMES = ["web_extract"]
 WEB_SEARCH_TOOL_NAME = "web_search"
+WEB_SEARCH_TOOL_PROVIDERS = {
+    "brave_web_search_v1": "brave",
+    "mock_web_search_v1": "mock",
+    "parallel_web_search_v1": "parallel",
+}
 
 # Code execution tools
 CODE_EXECUTION_TOOL_NAME = "code_execution"
@@ -74,6 +79,8 @@ INTERNAL_TOOLS = [
 def resolve_internal_tool_name(tool_type: str | None) -> str | None:
     if not tool_type:
         return None
+    if tool_type in WEB_SEARCH_TOOL_PROVIDERS:
+        return WEB_SEARCH_TOOL_NAME
 
     normalized_tool_type = re.sub(r"_v\d+$", "", tool_type)
     if normalized_tool_type in WEB_FETCH_LEGACY_TOOL_NAMES:

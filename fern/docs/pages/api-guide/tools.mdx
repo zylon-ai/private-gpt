@@ -32,6 +32,11 @@ Built-in server tools only require `name` and `type`. Do not provide `inputSchem
 | `web_search_v1` | Search the web | Default Parallel search requires `tool-mcp`, included in `tools` and `core` |
 | `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
 
+Use `web_search_v1` to use the backend’s configured search provider. Workbench
+uses the provider-specific types `parallel_web_search_v1`, `brave_web_search_v1`,
+or `mock_web_search_v1` after identifying the provider. These types return a tool
+error if the backend executing the query is configured for a different provider.
+
 Minimal example:
 
 ```json

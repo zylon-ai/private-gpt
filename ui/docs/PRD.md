@@ -615,7 +615,7 @@ The current OpenAPI exposes:
 - `POST /v1/tools/web-search`
 - `POST /v1/tools/web-fetch`
 
-The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available `web_search_v1` and `web_fetch_v1` tools to chat requests. Saved chats must turn on Web for the connected backend before using automatically configured Parallel search.
+The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available tools to chat requests. Workbench sends the provider-specific search type and uses `web_fetch_v1` for URL fetch. Saved chats must turn on Web for the connected backend before using automatically configured Parallel search.
 
 ### MCP
 
