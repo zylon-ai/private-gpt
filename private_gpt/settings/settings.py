@@ -1952,6 +1952,10 @@ class WebSearchSettings(BaseModel):
         description="Number of tokens to reserve for tool usage in the LLM prompt.",
     )
 
+    @property
+    def automatic_provider(self) -> bool:
+        return "provider" not in self.model_fields_set
+
 
 class TasksResultsBroker(BaseModel):
     mode: Literal["none", "rabbitmq"]

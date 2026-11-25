@@ -56,7 +56,7 @@ async def web_capabilities(request: Request) -> WebCapabilities:
 
     return WebCapabilities(
         provider=settings.web_search.provider,
-        automatic_provider="provider" not in settings.web_search.model_fields_set,
+        automatic_provider=settings.web_search.automatic_provider,
         search_available=search_unavailable_reason is None,
         fetch_available=(
             settings.web_fetch.enabled and not settings.server.network.offline_mode

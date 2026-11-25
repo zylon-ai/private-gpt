@@ -26,6 +26,9 @@ from private_gpt.components.tools.remote_execution import (
 from private_gpt.components.tools.tool_execution_outcome import ToolExecutionFailure
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
 from private_gpt.components.web.web_search.providers.brave import BraveSearchProvider
+from private_gpt.components.web.web_search.providers.parallel import (
+    ParallelSearchProvider,
+)
 from tests.fixtures.mock_injector import MockInjector
 
 if TYPE_CHECKING:
@@ -147,16 +150,18 @@ async def test_local_and_celery_schedulers_return_the_same_error_tool_result(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    ("tool_type", "expected_error"),
+    ("tool_type", "worker_provider", "expected_error"),
     [
-        ("parallel_web_search_v1", "differs from the expected provider"),
-        ("web_search_v0", "Review the current provider"),
+        ("parallel_web_search_v1", "brave", "differs from the expected provider"),
+        ("web_search_v0", "brave", "Review the current provider"),
+        ("web_search_v1", "auto", "Select the search provider"),
     ],
 )
 async def test_worker_honors_the_search_provider_in_a_queued_tool(
     injector: MockInjector,
     monkeypatch: pytest.MonkeyPatch,
     tool_type: str,
+    worker_provider: str,
     expected_error: str,
 ) -> None:
     task_module = importlib.import_module(
@@ -192,7 +197,7 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
         {
             "web_search": {
                 "enabled": True,
-                "provider": "brave",
+                "provider": worker_provider,
                 "processor": "simple_text",
             },
             "brave": {"api_key": "fixture-key"},
@@ -203,6 +208,7 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
     )
     search = AsyncMock()
     monkeypatch.setattr(BraveSearchProvider, "make_query", search)
+    monkeypatch.setattr(ParallelSearchProvider, "make_query", search)
 
     result = ToolExecutionResponse.model_validate(
         await task_module.tool_run_task.run(

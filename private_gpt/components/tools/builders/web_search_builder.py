@@ -66,7 +66,10 @@ class WebSearchToolBuilder:
                 pass
 
             results = await self.web_search_service.search(
-                query, model_id=model_id, expected_provider=expected_provider
+                query,
+                model_id=model_id,
+                expected_provider=expected_provider,
+                require_explicit_provider=expected_provider is None,
             )
             return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 

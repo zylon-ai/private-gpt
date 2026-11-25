@@ -28,6 +28,9 @@ from private_gpt.components.tools.tool_names import (
 )
 from private_gpt.components.web.web_search.models import WebSearchResult
 from private_gpt.components.web.web_search.providers.brave import BraveSearchProvider
+from private_gpt.components.web.web_search.providers.parallel import (
+    ParallelSearchProvider,
+)
 from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     FatalError,
@@ -117,27 +120,31 @@ async def mock_llm(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "async_test_client",
+    ("async_test_client", "tool_type", "expected_error"),
     [
-        {
-            "web_search": {
-                "enabled": True,
-                "provider": "brave",
-                "processor": "simple_text",
+        pytest.param(
+            {
+                "web_search": {
+                    "provider": provider,
+                    "enabled": True,
+                    "processor": "simple_text",
+                },
+                "brave": {"api_key": "fixture-key"},
             },
-            "brave": {"api_key": "fixture-key"},
-        }
+            tool_type,
+            expected_error,
+            id=f"{provider}-{tool_type}",
+        )
+        for provider, tool_type, expected_error in [
+            ("brave", "web_search_v1", None),
+            ("brave", "brave_web_search_v1", None),
+            ("brave", "parallel_web_search_v1", "differs from the expected provider"),
+            ("brave", "web_search_v0", "Review the current provider"),
+            ("auto", "web_search_v1", "Select the search provider"),
+            ("auto", "parallel_web_search_v1", None),
+        ]
     ],
-    indirect=True,
-)
-@pytest.mark.parametrize(
-    ("tool_type", "expected_error"),
-    [
-        ("web_search_v1", None),
-        ("brave_web_search_v1", None),
-        ("parallel_web_search_v1", "differs from the expected provider"),
-        ("web_search_v0", "Review the current provider"),
-    ],
+    indirect=["async_test_client"],
 )
 async def test_messages_honors_the_search_provider_in_the_tool_type(
     async_test_client: AsyncClient,
@@ -170,6 +177,7 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
         ]
     )
     monkeypatch.setattr(BraveSearchProvider, "make_query", search)
+    monkeypatch.setattr(ParallelSearchProvider, "make_query", search)
 
     response = await async_test_client.post(
         "/v1/messages",

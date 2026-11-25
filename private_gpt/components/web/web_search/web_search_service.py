@@ -70,6 +70,7 @@ class WebSearchService:
         model_id: str | None = None,
         *,
         expected_provider: str | None = None,
+        require_explicit_provider: bool = False,
         **kwargs: Any,
     ) -> list[WebSearchResult]:
         if (
@@ -81,6 +82,11 @@ class WebSearchService:
                 "Review the current provider before enabling search again."
             )
         await self.validate()
+        if require_explicit_provider and self._settings.web_search.automatic_provider:
+            raise ValueError(
+                "Select the search provider in the chat tool type or configure it "
+                "explicitly on the backend before running web search."
+            )
 
         provider = type(self._provider).__name__
         processor = type(self._processor).__name__

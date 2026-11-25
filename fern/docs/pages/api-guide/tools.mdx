@@ -29,13 +29,16 @@ Built-in server tools only require `name` and `type`. Do not provide `inputSchem
 | `semantic_search_v1` | Search ingested documents | Available in `private-gpt[core]` and installs with ingestion support |
 | `tabular_analysis_v1` | Analyze ingested tabular data | Requires `tool-tabular` or `tools` |
 | `database_query_v1` | Query a SQL database | Requires database extras |
-| `web_search_v1` | Search the web | Default Parallel search requires `tool-mcp`, included in `tools` and `core` |
+| `parallel_web_search_v1` | Search with Parallel | Requires `tool-mcp`, included in `tools` and `core` |
+| `web_search_v1` | Search with an explicitly configured provider | Dependencies vary by provider |
 | `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
 
-Use `web_search_v1` to use the backend’s configured search provider. Workbench
-uses the provider-specific types `parallel_web_search_v1`, `brave_web_search_v1`,
-or `mock_web_search_v1` after identifying the provider. These types return a tool
-error if the backend executing the query is configured for a different provider.
+Use `parallel_web_search_v1` in Messages to use the default Parallel provider.
+Workbench reads the provider from `GET /v1/tools/web-capabilities` and chooses
+`parallel_web_search_v1`, `brave_web_search_v1`, or `mock_web_search_v1`. These
+types return a tool error if the backend executing the query uses a different
+provider. The generic `web_search_v1` only runs when the operator explicitly
+selected a provider in backend settings.
 
 Minimal example:
 
@@ -43,7 +46,7 @@ Minimal example:
 {
   "tools": [
     {"name": "search_docs", "type": "semantic_search_v1"},
-    {"name": "search_web", "type": "web_search_v1"},
+    {"name": "search_web", "type": "parallel_web_search_v1"},
     {"name": "fetch_url", "type": "web_fetch_v1"}
   ]
 }
@@ -143,7 +146,7 @@ mssql+pyodbc://user:pass@localhost:1433/mydb?driver=ODBC+Driver+18+for+SQL+Serve
 db2://user:pass@localhost:50000/sample
 ```
 
-#### Example: `web_search_v1`
+#### Example: `parallel_web_search_v1`
 
 Default Parallel search requires `private-gpt[tool-mcp]`, included in
 `private-gpt[tools]` and `private-gpt[core]`. No `context` is required.
@@ -157,7 +160,7 @@ Default Parallel search requires `private-gpt[tool-mcp]`, included in
   "tools": [
     {
       "name": "search_web",
-      "type": "web_search_v1"
+      "type": "parallel_web_search_v1"
     }
   ]
 }
