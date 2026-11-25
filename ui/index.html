@@ -6608,9 +6608,9 @@
         ? JSON.stringify([(state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ""), state.privateGptUsername, web.provider])
         : null;
       const fetch = web?.legacy || web?.fetch_available;
-      // Older chats can keep explicitly configured search. Automatic search
-      // and chats that already chose a provider need consent for this backend.
-      const needsConsent = search && (web.legacy || web.automatic_provider || chat.settings.webConsent);
+      // Only older chats lack the field. A saved null means Web was enabled
+      // without consenting to a search provider, such as in fetch-only mode.
+      const needsConsent = search && (web.legacy || web.automatic_provider || chat.settings.webConsent !== undefined);
       const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!needsConsent || chat.settings.webConsent === consent));
       return { search, fetch, provider, disclosure, consent, enabled };
     }
