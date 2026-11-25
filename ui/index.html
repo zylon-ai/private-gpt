@@ -6604,34 +6604,39 @@
       const disclosure = web?.provider === "mock"
         ? "Mock search uses fixture results."
         : `Search queries can include chat context and go to ${provider}.`;
-      // Older saved Web settings predate keyless search. Ask the user to turn
-      // Web on for this backend before a chat can use the new default provider.
-      const consent = search && (web.legacy || web.automatic_provider)
+      const consent = search
         ? JSON.stringify([(state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ""), state.privateGptUsername, web.provider])
         : null;
       const fetch = web?.legacy || web?.fetch_available;
-      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!consent || chat.settings.webConsent === consent));
+      // Older chats can keep explicitly configured search. Automatic search
+      // and chats that already chose a provider need consent for this backend.
+      const needsConsent = search && (web.legacy || web.automatic_provider || chat.settings.webConsent);
+      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!needsConsent || chat.settings.webConsent === consent));
       return { search, fetch, provider, disclosure, consent, enabled };
     }
 
-    async function loadWebCapabilities() {
-      const request = {};
-      runtime.webCapabilitiesRequest = request;
-      let web;
-      try {
-        web = await apiFetch("/v1/tools/web-capabilities", {}, { label: "Check web tools" });
-        if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean"
-            || typeof web?.automatic_provider !== "boolean" || typeof web?.provider !== "string") {
-          web = { error: true };
+    function loadWebCapabilities() {
+      if (runtime.webCapabilitiesRequest) return runtime.webCapabilitiesRequest;
+      const request = (async () => {
+        let web;
+        try {
+          web = await apiFetch("/v1/tools/web-capabilities", {}, { label: "Check web tools" });
+          if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean"
+              || typeof web?.automatic_provider !== "boolean" || typeof web?.provider !== "string") {
+            web = { error: true };
+          }
+        } catch (error) {
+          web = error.status === 404 ? { legacy: true } : { error: true };
         }
-      } catch (error) {
-        web = error.status === 404 ? { legacy: true } : { error: true };
-      }
-      if (runtime.webCapabilitiesRequest !== request) return false;
-      runtime.webCapabilities = web;
-      renderWebCapabilities();
-      if (runtime.view === "chat") renderToolMenu();
-      return true;
+        if (runtime.webCapabilitiesRequest !== request) return null;
+        runtime.webCapabilitiesRequest = null;
+        runtime.webCapabilities = web;
+        renderWebCapabilities();
+        if (runtime.view === "chat") renderToolMenu();
+        return web;
+      })();
+      runtime.webCapabilitiesRequest = request;
+      return request;
     }
 
     async function apiFetch(path, { method = "GET", body, headers = {} } = {}, debugMeta = {}) {
@@ -7083,8 +7088,10 @@
 
     async function requestAssistant(chat, depth, mergeIntoMessage = null) {
       // The same backend URL can start using a different provider after a restart.
-      const web = featureEnabled("web") && chat.settings.enabledWeb && await loadWebCapabilities()
-        ? webToolsForChat(chat) : null;
+      const checkWeb = featureEnabled("web") && chat.settings.enabledWeb;
+      const capabilities = checkWeb ? await loadWebCapabilities() : null;
+      const connectionChanged = checkWeb && (!capabilities || capabilities !== runtime.webCapabilities);
+      const web = checkWeb && !connectionChanged ? webToolsForChat(chat) : null;
       const body = buildChatBody(chat, web);
 
       // When merging into a parent message, update it in-place; otherwise create a new streaming message.
@@ -7117,6 +7124,7 @@
       let streamingTextEl = null;
 
       try {
+        if (connectionChanged) throw new Error("The backend connection changed before this message was sent.");
         const response = await apiStreamFetch("/v1/messages", { method: "POST", body }, { label: "Chat message" }, (blocks) => {
           const allBlocks = [...prefixBlocks, ...blocks];
           displayMessage.contentBlocks = allBlocks;
@@ -7800,10 +7808,11 @@
       state.privateGptBaseUrl = values.baseUrl || DEFAULT_BASE_URL;
       state.privateGptUsername = values.username || "";
       state.privateGptPassword = values.password || "";
-      if (connectionChanged || runtime.webCapabilities?.error) {
+      if (connectionChanged) {
         runtime.webCapabilities = null;
-        loadWebCapabilities();
+        runtime.webCapabilitiesRequest = null;
       }
+      if (connectionChanged || runtime.webCapabilities?.error) loadWebCapabilities();
       if (typeof values.systemPrompt === "string") state.systemPrompt = values.systemPrompt;
       if (typeof values.useCitations === "boolean") state.useCitations = values.useCitations;
       if (typeof values.useDefaultPrompt === "boolean") state.useDefaultPrompt = values.useDefaultPrompt;
@@ -8158,6 +8167,7 @@
           runtime.citations = new Map();
           runtime.selectedDebugId = null;
           runtime.webCapabilities = null;
+          runtime.webCapabilitiesRequest = null;
           runtime.onboardingCheckRunning = false;
           runtime.sendingChatIds.clear();
           closeModal();
