@@ -1,0 +1,35 @@
+# Repo-specific release tasks. Keep the input contract shared with zylon-base-template.
+name: Release hooks
+
+on:
+  workflow_call:
+    inputs:
+      release_created:
+        type: boolean
+        required: true
+      version:
+        type: string
+        required: false
+        default: ''
+      tag_name:
+        type: string
+        required: false
+        default: ''
+      sha:
+        type: string
+        required: false
+        default: ''
+      pr:
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  no-custom-hooks:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo 'No additional release tasks configured. Artifact publication uses repository-specific workflows.'

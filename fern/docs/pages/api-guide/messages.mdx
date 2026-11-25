@@ -36,7 +36,7 @@ curl http://localhost:8080/v1/messages \
 
 ## Context — documents, databases, web
 
-Pass `tool_context` to give the model access to ingested documents or databases.
+Give the model a tool with a `context` to let it read ingested documents or databases. A `tool_context` on its own is rejected unless `tools` is also set.
 
 **Ingested documents** (retrieval with citations):
 
@@ -44,13 +44,19 @@ Pass `tool_context` to give the model access to ingested documents or databases.
 {
   "model": "qwen3.5:35b",
   "messages": [{"role": "user", "content": "Summarise the contract."}],
-  "tool_context": [
+  "tools": [
     {
-      "type": "ingested_artifact",
-      "context_filter": {
-        "collection": "my-collection",
-        "artifacts": ["artifact-id-1"]
-      }
+      "name": "search_docs",
+      "type": "semantic_search_v1",
+      "context": [
+        {
+          "type": "ingested_artifact",
+          "context_filter": {
+            "collection": "my-collection",
+            "artifacts": ["artifact-id-1"]
+          }
+        }
+      ]
     }
   ]
 }
@@ -60,11 +66,17 @@ Pass `tool_context` to give the model access to ingested documents or databases.
 
 ```json
 {
-  "tool_context": [
+  "tools": [
     {
-      "type": "sql_database",
-      "connection_string": "postgresql://user:pass@localhost:5432/mydb",
-      "description": "Sales database"
+      "name": "query_db",
+      "type": "database_query_v1",
+      "context": [
+        {
+          "type": "sql_database",
+          "connection_string": "postgresql://user:pass@localhost:5432/mydb",
+          "description": "Sales database"
+        }
+      ]
     }
   ]
 }

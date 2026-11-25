@@ -5,7 +5,6 @@ import hashlib
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-import magic  # ty:ignore[unresolved-import]
 from fastapi import HTTPException
 from injector import inject, singleton
 
@@ -29,6 +28,7 @@ from private_gpt.server.files.file_models import (
     NamespaceListResponse,
 )
 from private_gpt.settings.settings import Settings
+from private_gpt.utils.mime import detect_mime_from_buffer
 
 if TYPE_CHECKING:
     from fastapi import UploadFile
@@ -38,10 +38,7 @@ if TYPE_CHECKING:
 
 
 def _detect_mime_from_bytes(content: bytes) -> str:
-    try:
-        return magic.Magic(mime=True).from_buffer(content)
-    except Exception:
-        return "application/octet-stream"
+    return detect_mime_from_buffer(content)
 
 
 def _compute_etag(content: bytes) -> str:

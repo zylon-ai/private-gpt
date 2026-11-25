@@ -7,7 +7,7 @@ import pytest
 from private_gpt.components.web.web_search.models import WebSearchResult
 from private_gpt.components.web.web_search.web_search_service import WebSearchService
 from private_gpt.events.models import ResultContentBlockType, TextBlock
-from private_gpt.settings.settings import Settings
+from private_gpt.settings.settings import ParallelSearchSettings, Settings
 
 
 @pytest.fixture
@@ -24,6 +24,9 @@ def mock_settings_factory():
     ) -> Settings:
         # Create a minimal Settings object with web_search configuration
         settings = MagicMock(spec=Settings)
+        settings.parallel = ParallelSearchSettings()
+        settings.server = MagicMock()
+        settings.server.network.proxy.enabled = False
         settings.web_search = MagicMock()
         settings.web_search.enabled = enabled
         settings.web_search.provider = provider
@@ -178,6 +181,7 @@ class TestWebSearchServiceInitialization:
         ("provider", "expected_class"),
         [
             ("brave", "BraveSearchProvider"),
+            ("parallel", "ParallelSearchProvider"),
             ("specstream", "SpecStreamSearchProvider"),
         ],
     )
@@ -207,6 +211,7 @@ class TestWebSearchServiceInitialization:
         ("provider", "expected_class"),
         [
             ("brave", "CachedProvider"),
+            ("parallel", "CachedProvider"),
             ("specstream", "CachedProvider"),
         ],
     )

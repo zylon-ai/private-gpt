@@ -100,5 +100,6 @@ class RestoreStatelessInputInterceptorRequest(ChatRequestLoopInterceptor):
         # to the original values at the start of each iteration.
         context.state.input.sampling_params = dict(original.sampling_params)
         context.state.input.llm_kwargs = original.llm_kwargs.model_copy(deep=True)
+        context.state.input.loop_guard = None
 
         context.set_state(context.state)

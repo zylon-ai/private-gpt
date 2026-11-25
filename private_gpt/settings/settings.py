@@ -562,6 +562,28 @@ class SchedulerConfig(BaseModel):
     )
 
 
+class RepeatGuardSettings(BaseModel):
+    enabled: bool = Field(
+        default=True,
+        description="Detect repeated tool calls/results since the latest user "
+        "message and change how the history is shown to the LLM to break the loop.",
+    )
+    flatten_after: int = Field(
+        default=3,
+        ge=2,
+        description="Show the history as a single work log once the latest tool "
+        "call or result has been seen this many times.",
+    )
+    final_after: int = Field(
+        default=4,
+        ge=1,
+        description="Remove tools and ask for the final answer once this many "
+        "tool steps since the latest user message repeat an earlier one. With the "
+        "defaults, the history is flattened on the 3rd and 4th identical step and "
+        "the final answer is requested on the 5th.",
+    )
+
+
 class ChatSettings(BaseModel):
     engine_mode: Literal["loop", "async"] = Field(
         default="async",
@@ -570,6 +592,10 @@ class ChatSettings(BaseModel):
     max_iterations: int = Field(
         default=100,
         description="Maximum number of iterations for the chat loop.",
+    )
+    repeat_guard: RepeatGuardSettings = Field(
+        default_factory=RepeatGuardSettings,
+        description="Deterministic loop guard based on repeated tool steps.",
     )
     loop_detection_interval: int | None = Field(
         default=None,
@@ -1837,6 +1863,13 @@ class SpecStreamSearchSettings(BaseModel):
     timeout: int = Field(default=30, description="Request timeout in seconds")
 
 
+class ParallelSearchSettings(BaseModel):
+    api_key: str | None = Field(
+        default=None, repr=False, description="Optional Parallel API key"
+    )
+    timeout: int = Field(default=30, gt=0, description="Search timeout in seconds")
+
+
 class WebSearchParams(BaseModel):
     max_timeout_seconds: int | None = Field(
         default=70, description="Maximum timeout to spend in webseach."
@@ -1890,7 +1923,7 @@ class WebSearchSettings(BaseModel):
         default=False,
         description="Flag indicating if the web search is enabled.",
     )
-    provider: Literal["brave", "specstream", "mock"] = Field(
+    provider: Literal["brave", "mock", "parallel", "specstream"] = Field(
         default="brave",
         description="The web search provider to use.",
     )
@@ -2503,6 +2536,7 @@ class Settings(BaseModel):
     specstream: SpecStreamSearchSettings = Field(
         default_factory=SpecStreamSearchSettings
     )
+    parallel: ParallelSearchSettings = Field(default_factory=ParallelSearchSettings)
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
