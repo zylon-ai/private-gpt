@@ -6604,14 +6604,9 @@
       const disclosure = web?.provider === "mock"
         ? "Mock search uses fixture results."
         : `Search queries can include chat context and go to ${provider}.`;
-      const consent = search
-        ? JSON.stringify([(state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ""), state.privateGptUsername, web.provider])
-        : null;
+      const consent = search ? (web.legacy ? "legacy" : web.provider) : null;
       const fetch = web?.legacy || web?.fetch_available;
-      // Only older chats lack the field. A saved null means Web was enabled
-      // without consenting to a search provider, such as in fetch-only mode.
-      const needsConsent = search && (web.legacy || web.automatic_provider || chat.settings.webConsent !== undefined);
-      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!needsConsent || chat.settings.webConsent === consent));
+      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!search || chat.settings.webConsent === consent));
       return { search, fetch, provider, disclosure, consent, enabled };
     }
 
@@ -6631,6 +6626,15 @@
         if (runtime.webCapabilitiesRequest !== request) return null;
         runtime.webCapabilitiesRequest = null;
         runtime.webCapabilities = web;
+        if (!web.error) {
+          const migratedChats = state.chats.filter(chat => chat.settings.enabledWeb && chat.settings.webConsent === undefined);
+          if (migratedChats.length) {
+            // On the first capability check, carry forward only an available, explicitly configured provider.
+            const consent = web.search_available && !web.automatic_provider ? web.provider : null;
+            migratedChats.forEach(chat => { chat.settings.webConsent = consent; });
+            saveState();
+          }
+        }
         renderWebCapabilities();
         if (runtime.view === "chat") renderToolMenu();
         return web;
@@ -7809,6 +7813,10 @@
       state.privateGptUsername = values.username || "";
       state.privateGptPassword = values.password || "";
       if (connectionChanged) {
+        for (const chat of state.chats) {
+          chat.settings.enabledWeb = false;
+          chat.settings.webConsent = null;
+        }
         runtime.webCapabilities = null;
         runtime.webCapabilitiesRequest = null;
       }
