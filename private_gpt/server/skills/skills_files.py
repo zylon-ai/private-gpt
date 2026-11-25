@@ -133,21 +133,14 @@ def _infer_file_meta(field_name: str, content: bytes | None) -> tuple[str, str]:
     if content is None:
         return field_name, _DEFAULT_MIME_TYPE
 
-    from private_gpt.utils.mime import is_magic_available
+    from private_gpt.utils.mime import detect_mime_from_buffer
 
-    if not is_magic_available():
-        return field_name.rstrip("[]"), _DEFAULT_MIME_TYPE
-
-    import magic  # ty:ignore[unresolved-import]
-
-    mime = magic.from_buffer(content, mime=True)
-
-    if not isinstance(mime, str) or not mime:
-        return field_name.rstrip("[]"), _DEFAULT_MIME_TYPE
-
-    ext = mimetypes.guess_extension(mime) or ""
+    # Same sniffer as ingestion, so a docx is not renamed to .zip when the
+    # sniffer only sees the ZIP container.
+    detected = detect_mime_from_buffer(content)
+    ext = mimetypes.guess_extension(detected) or ""
     filename = f"{field_name.rstrip('[]')}{ext}"
-    return filename, mime
+    return filename, detected
 
 
 def _is_zip(upload: UploadFile) -> bool:
