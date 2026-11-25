@@ -3527,7 +3527,7 @@
               <div class="panel-head">
                 <div>
                   <h2>Web</h2>
-                  <p class="subtle">Use web search and fetch tools when the PrivateGPT backend has them configured.</p>
+                  <p class="subtle" id="webCapabilitiesStatus" role="status">Checking web tools on the backend.</p>
                 </div>
               </div>
               <div class="settings-card">
@@ -3536,7 +3536,7 @@
                   <p class="subtle">Workbench does not store web provider credentials.</p>
                 </div>
                 <div>
-                  <p class="subtle">The PrivateGPT backend sends search queries to its configured provider. Configure the provider and any required credentials on the backend. Enable Web in a chat's Tools menu to include the `web_search` and `web_fetch` tools in that request.</p>
+                  <p class="subtle">Web is off in new chats. Enable it in a chat’s Tools menu to let the assistant use the available web tools. Search queries can include chat context and are sent to the backend’s search provider. Change the provider or disable search in the backend settings.</p>
                 </div>
               </div>
             </section>
@@ -4104,6 +4104,8 @@
       citations: new Map(),
       selectedDebugId: null,
       githubStars: null,
+      webCapabilities: null,
+      webCapabilitiesRequest: null,
       onboardingCheckRunning: false,
       appearanceGeneration: {
         activePrefix: null,
@@ -4793,6 +4795,7 @@
       });
       renderDocuments();
       renderDatabases();
+      renderWebCapabilities();
       renderMcp();
       renderSkills();
       renderCustomTools();
@@ -5396,9 +5399,18 @@
         }, !hasDocs)
       ];
       if (featureEnabled("web")) {
-        knowledgeRows.push(toggleRow("Web", Boolean(chat.settings.enabledWeb), checked => {
-          chat.settings.enabledWeb = checked; touchChat(chat); saveState();
-        }));
+        const web = webToolsForChat(chat);
+        const label = web.search ? `Web · ${web.provider}` : web.fetch ? "Web fetch" : "Web";
+        knowledgeRows.push(toggleRow(label, web.enabled, checked => {
+          chat.settings.enabledWeb = checked;
+          chat.settings.webConsent = checked ? web.consent : null;
+          touchChat(chat);
+          saveState();
+        }, !web.search && !web.fetch));
+        const status = document.createElement("div");
+        status.className = "menu-empty";
+        status.textContent = web.search ? web.disclosure : webCapabilitiesStatus();
+        knowledgeRows.push(status);
       }
       menu.appendChild(menuGroup("Knowledge", knowledgeRows));
       if (state.enableCodeExecution !== false) {
@@ -6566,6 +6578,59 @@
       return error?.message ?? "Unknown error";
     }
 
+    function webCapabilitiesStatus() {
+      const web = runtime.webCapabilities;
+      if (!web) return "Checking web tools on the backend.";
+      if (web.error) return "Could not check web tools. Check the backend connection.";
+      if (web.legacy) return "This backend does not report which web tools are available.";
+      const search = web.search_available
+        ? `Search provider: ${webProviderName(web.provider)}.`
+        : web.search_unavailable_reason || "Web search is unavailable.";
+      return `${search} URL fetch is ${web.fetch_available ? "available" : "unavailable"}.`;
+    }
+
+    function webProviderName(provider) {
+      return { parallel: "Parallel MCP", brave: "Brave", mock: "Mock" }[provider] || provider;
+    }
+
+    function renderWebCapabilities() {
+      $("#webCapabilitiesStatus").textContent = webCapabilitiesStatus();
+    }
+
+    function webToolsForChat(chat) {
+      const web = runtime.webCapabilities;
+      const search = web?.legacy || web?.search_available;
+      const provider = web?.legacy ? "the backend’s configured provider" : webProviderName(web?.provider);
+      const disclosure = web?.provider === "mock"
+        ? "Mock search uses fixture results."
+        : `Search queries can include chat context and go to ${provider}.`;
+      // Older saved Web settings predate keyless search. Ask the user to turn
+      // Web on for this backend before a chat can use the new default provider.
+      const consent = search && (web.legacy || web.automatic_provider)
+        ? JSON.stringify([(state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ""), state.privateGptUsername, web.provider])
+        : null;
+      const enabled = Boolean(chat.settings.enabledWeb && (!consent || chat.settings.webConsent === consent));
+      return { search, fetch: web?.legacy || web?.fetch_available, provider, disclosure, consent, enabled };
+    }
+
+    async function loadWebCapabilities() {
+      const request = {};
+      runtime.webCapabilitiesRequest = request;
+      let web;
+      try {
+        web = await apiFetch("/v1/tools/web-capabilities", {}, { label: "Check web tools" });
+        if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean") {
+          web = { error: true };
+        }
+      } catch (error) {
+        web = error.status === 404 ? { legacy: true } : { error: true };
+      }
+      if (runtime.webCapabilitiesRequest !== request) return;
+      runtime.webCapabilities = web;
+      renderWebCapabilities();
+      if (runtime.view === "chat") renderToolMenu();
+    }
+
     async function apiFetch(path, { method = "GET", body, headers = {} } = {}, debugMeta = {}) {
       const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
       const url = `${base}${path}`;
@@ -7240,9 +7305,10 @@
       if (chat.settings.enabledCodeExecution) {
         tools.push({ name: "code_execution", type: "code_execution_v1" });
       }
-      if (featureEnabled("web") && chat.settings.enabledWeb) {
-        tools.push({ name: "web_search", type: "web_search_v1" });
-        tools.push({ name: "web_fetch", type: "web_fetch_v1" });
+      if (featureEnabled("web")) {
+        const web = webToolsForChat(chat);
+        if (web.enabled && web.search) tools.push({ name: "web_search", type: "web_search_v1" });
+        if (web.enabled && web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });
       }
       if (featureEnabled("databases")) {
         selectedItems(state.context.databases, chat.settings.enabledDatabases).forEach(db => {
@@ -7723,9 +7789,16 @@
     }
 
     function applyConnectionSettings(values) {
+      const connectionChanged = state.privateGptBaseUrl !== (values.baseUrl || DEFAULT_BASE_URL)
+        || state.privateGptUsername !== (values.username || "")
+        || state.privateGptPassword !== (values.password || "");
       state.privateGptBaseUrl = values.baseUrl || DEFAULT_BASE_URL;
       state.privateGptUsername = values.username || "";
       state.privateGptPassword = values.password || "";
+      if (connectionChanged || runtime.webCapabilities?.error) {
+        runtime.webCapabilities = null;
+        loadWebCapabilities();
+      }
       if (typeof values.systemPrompt === "string") state.systemPrompt = values.systemPrompt;
       if (typeof values.useCitations === "boolean") state.useCitations = values.useCitations;
       if (typeof values.useDefaultPrompt === "boolean") state.useDefaultPrompt = values.useDefaultPrompt;
@@ -8004,6 +8077,7 @@
         if (!isOpen) {
           menu.classList.remove("closing");
           positionComposerPopover(menu, event.currentTarget, 360);
+          if (runtime.webCapabilities?.error) loadWebCapabilities();
         }
         if (isOpen) closeToolsMenu();
         else menu.classList.add("open");
@@ -8078,10 +8152,12 @@
           runtime.debugEvents = [];
           runtime.citations = new Map();
           runtime.selectedDebugId = null;
+          runtime.webCapabilities = null;
           runtime.onboardingCheckRunning = false;
           runtime.sendingChatIds.clear();
           closeModal();
           render();
+          loadWebCapabilities();
           toast("Local workbench data cleared.", "ok");
         }
       );
@@ -8206,6 +8282,7 @@
     restoreFromHash();
     if (!state.chats.length) createChat();
     else render();
+    loadWebCapabilities();
     refreshSkills({ showToast: false });
     loadGitHubStars();
   </script>

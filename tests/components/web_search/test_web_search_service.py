@@ -25,6 +25,7 @@ def mock_settings_factory():
         settings = MagicMock(spec=Settings)
         settings.parallel = ParallelSearchSettings()
         settings.server = MagicMock()
+        settings.server.network.offline_mode = False
         settings.server.network.proxy.enabled = False
         settings.web_search = MagicMock()
         settings.web_search.enabled = enabled

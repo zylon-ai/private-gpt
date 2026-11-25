@@ -10,12 +10,14 @@ from private_gpt.components.tools.remote_execution import ToolExecutionRequest
 from private_gpt.components.tools.tool_scheduler import (
     ToolSchedulerFactory,
 )
+from private_gpt.components.web.web_search.web_search_service import WebSearchService
 from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.server.utils.artifact_input import ArtifactType, SqlDatabaseArtifact
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.http_disconnect import cancel_on_http_disconnect
 from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
+from private_gpt.settings.settings import Settings
 
 tool_router = APIRouter(
     prefix="/v1",
@@ -23,6 +25,44 @@ tool_router = APIRouter(
     tags=["Tools"],
     responses={401: {"description": "Unauthorized"}},
 )
+
+
+class WebCapabilities(BaseModel):
+    """Configured web tools and their local availability."""
+
+    provider: str = Field(description="The effective search provider.")
+    automatic_provider: bool = Field(
+        description="Whether the search provider was selected by default."
+    )
+    search_available: bool = Field(
+        description="Whether search is enabled and passes local configuration checks."
+    )
+    fetch_available: bool = Field(description="Whether URL fetching is enabled online.")
+    search_unavailable_reason: str | None = Field(
+        default=None, description="Why search is unavailable, if applicable."
+    )
+
+
+@tool_router.get("/tools/web-capabilities", response_model=WebCapabilities)
+async def web_capabilities(request: Request) -> WebCapabilities:
+    """Report which built-in web tools can run without contacting a provider."""
+    injector = request.state.injector
+    settings = injector.get(Settings)
+    search_unavailable_reason = None
+    try:
+        await WebSearchService.validate_configuration(settings)
+    except (ImportError, ValueError) as exc:
+        search_unavailable_reason = str(exc)
+
+    return WebCapabilities(
+        provider=settings.web_search.provider,
+        automatic_provider="provider" not in settings.web_search.model_fields_set,
+        search_available=search_unavailable_reason is None,
+        fetch_available=(
+            settings.web_fetch.enabled and not settings.server.network.offline_mode
+        ),
+        search_unavailable_reason=search_unavailable_reason,
+    )
 
 
 class SemanticSearchBody(BaseModel):

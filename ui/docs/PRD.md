@@ -615,7 +615,7 @@ The current OpenAPI exposes:
 - `POST /v1/tools/web-search`
 - `POST /v1/tools/web-fetch`
 
-The web search provider and any required credentials belong in PrivateGPT backend config. In Workbench, explain in Context > Web that the backend sends search queries to the configured provider and let the chat Tools menu decide whether `web_search` and `web_extract` are included in a chat request. The direct diagnostic endpoint may still be named `/v1/tools/web-fetch`; for `/v1/messages`, use the chat tool spec `{ "name": "web_extract", "type": "web_extract_v1" }`.
+The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available `web_search_v1` and `web_fetch_v1` tools to chat requests. Saved chats must turn on Web for the connected backend before using automatically configured Parallel search.
 
 ### MCP
 

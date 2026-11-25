@@ -7,6 +7,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -1912,7 +1913,7 @@ class WebSearchSettings(BaseModel):
         description="Flag indicating if the web search is enabled.",
     )
     provider: Literal["brave", "mock", "parallel"] = Field(
-        default="brave",
+        default="parallel",
         description="The web search provider to use.",
     )
 
@@ -2533,6 +2534,30 @@ class Settings(BaseModel):
         default_factory=SchedulerConfig,
         description="Scheduler configuration for chat and tool workers.",
     )
+
+    @field_validator("web_search", mode="before")
+    @classmethod
+    def resolve_web_search_defaults(cls, value: Any, info: ValidationInfo) -> Any:
+        if not isinstance(value, dict):
+            return value
+
+        web_search = dict(value)
+        server = info.data.get("server")
+        offline = server is not None and server.network.offline_mode
+        automatic_provider = web_search.get("provider") == "auto"
+
+        if automatic_provider:
+            if offline:
+                web_search["provider"] = "mock"
+            else:
+                del web_search["provider"]
+        if web_search.get("enabled") == "auto":
+            web_search["enabled"] = automatic_provider and not offline
+        if web_search.get("processor") == "auto":
+            web_search["processor"] = (
+                "simple_text" if automatic_provider else "best_links"
+            )
+        return web_search
 
     @model_validator(mode="after")
     def validate_chat_scheduler_configuration(self) -> "Settings":

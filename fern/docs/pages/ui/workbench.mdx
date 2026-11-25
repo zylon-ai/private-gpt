@@ -35,10 +35,16 @@ The Context screen defines what the assistant can access. It has six sections:
 |---|---|
 | **Documents** | Upload files and query them with retrieval and citations |
 | **Databases** | Connect SQL/NoSQL databases for natural-language queries |
-| **Web** | Enable live web search and URL fetch |
+| **Web** | See the backend’s search provider and which web tools are available |
 | **MCP** | Connect MCP servers |
 | **Skills** | Enable built-in skills like code execution |
 | **Custom Tools** | Define your own tools via JSON schema |
+
+Web starts off in each new chat. To use it, open the chat’s **Tools** menu and
+turn on Web. A standard online backend offers Parallel MCP search without a
+search key. If the assistant calls search, its query can include chat context
+and is sent to the listed provider. See [Web Tools](/tools/web-tools) to change
+the provider or disable search on the backend.
 
 ---
 

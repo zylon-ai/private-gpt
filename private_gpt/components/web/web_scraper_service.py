@@ -76,6 +76,8 @@ class WebScraperService:
             )
 
     async def _scrape_html(self, url: str) -> str:
+        if self._settings.server.network.offline_mode:
+            raise ValueError("Web fetching is unavailable in offline mode.")
         if not self._initialized:
             raise ValueError(
                 "Web fetching is not properly initialized or it is disabled. "

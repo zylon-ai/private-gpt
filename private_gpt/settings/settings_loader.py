@@ -205,6 +205,14 @@ def load_active_settings() -> dict[str, Any]:
     ]
     merged: dict[str, Any] = merge_settings(loaded_profiles)
 
+    web_search = merged.get("web_search")
+    if (
+        ("mock" in active_profiles or "test" in active_profiles)
+        and isinstance(web_search, dict)
+        and web_search.get("provider") == "auto"
+    ):
+        web_search["provider"] = "mock"
+
     discovered_models = discover_models_from_environment()
     if discovered_models:
         merged["models"] = [

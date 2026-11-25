@@ -111,39 +111,58 @@ class WebSearchService:
                 "Consider enabling it in the configuration."
             )
 
+        self._validate_offline_mode(self._settings)
         await self._provider.validate()
         await self._processor.validate()
+
+    @classmethod
+    async def validate_configuration(cls, settings: Settings) -> None:
+        """Check availability without initializing the model or making a query."""
+        if not settings.web_search.enabled:
+            raise ValueError("Web search is disabled in backend settings.")
+        cls._validate_offline_mode(settings)
+        await cls._create_provider(settings).validate()
+        if settings.web_search.processor in {"best_links", "clean_content"} and (
+            not settings.web_fetch.enabled
+        ):
+            raise ValueError("The configured search processor requires URL fetching.")
+
+    @staticmethod
+    def _validate_offline_mode(settings: Settings) -> None:
+        web_search = settings.web_search
+        if settings.server.network.offline_mode and (
+            web_search.provider != "mock" or web_search.processor != "simple_text"
+        ):
+            raise ValueError("Live web search is unavailable in offline mode.")
 
     async def close(self) -> None:
         await self._provider.close()
 
-    def _initialize_providers(self) -> None:
-        if self._settings.web_search.provider == "brave":
+    @staticmethod
+    def _create_provider(settings: Settings) -> BaseWebSearchProvider:
+        provider = settings.web_search.provider
+        if provider == "brave":
             from private_gpt.components.web.web_search.providers.brave import (
                 BraveSearchProvider,
             )
 
-            self._provider = BraveSearchProvider(self._settings)
-        elif self._settings.web_search.provider == "mock":
+            return BraveSearchProvider(settings)
+        if provider == "mock":
             from private_gpt.components.web.web_search.providers.mock import (
                 MockSearchProvider,
             )
 
-            self._provider = MockSearchProvider()
-        elif self._settings.web_search.provider == "parallel":
+            return MockSearchProvider()
+        if provider == "parallel":
             from private_gpt.components.web.web_search.providers.parallel import (
                 ParallelSearchProvider,
             )
 
-            self._provider = ParallelSearchProvider(self._settings)
-        else:
-            logger.error(
-                f"Unsupported web search provider: {self._settings.web_search.provider}"
-            )
-            raise ValueError(
-                f"Unsupported web search provider: {self._settings.web_search.provider}"
-            )
+            return ParallelSearchProvider(settings)
+        raise ValueError(f"Unsupported web search provider: {provider}")
 
+    def _initialize_providers(self) -> None:
+        self._provider = self._create_provider(self._settings)
         if self._settings.web_search.cached:
             from private_gpt.components.web.web_search.providers.cached import (
                 CachedProvider,

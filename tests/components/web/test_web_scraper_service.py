@@ -19,6 +19,7 @@ def _settings(*, enabled: bool = True, provider: str = "fake") -> Settings:
     ssl.cert_file = None
     ssl.cert_dir = None
     settings.server = MagicMock()
+    settings.server.network.offline_mode = False
     settings.server.network.ssl = ssl
     return settings
 
@@ -75,6 +76,15 @@ async def test_disabled_web_fetch_raises() -> None:
     service = WebScraperService(settings=_settings(enabled=False))
     assert not service.is_initialized
     with pytest.raises(ValueError, match="disabled"):
+        await service.scrape("https://example.com")
+
+
+async def test_offline_web_fetch_rejects_enabled_provider() -> None:
+    settings = _settings()
+    settings.server.network.offline_mode = True
+    service = WebScraperService(settings=settings)
+
+    with pytest.raises(ValueError, match="offline mode"):
         await service.scrape("https://example.com")
 
 

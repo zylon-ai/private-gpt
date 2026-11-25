@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -7,8 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiohttp import web
+from httpx import AsyncClient
 
 from private_gpt.components.web.web_search.providers import parallel
+from private_gpt.components.web.web_search.web_search_service import WebSearchService
 from private_gpt.settings.settings import (
     NetworkSettings,
     ParallelSearchSettings,
@@ -127,6 +130,124 @@ async def test_parallel_search_uses_sdk_and_maps_excerpts(monkeypatch, api_key):
     assert [(r.url, r.title, r.description, r.age) for r in results] == [
         (hit["url"], hit["url"], "First excerpt.\n\nSecond excerpt.", "2026-01-01"),
     ]
+
+
+@pytest.mark.parametrize(
+    "async_test_client",
+    [
+        {
+            "web_search": {"provider": "auto"},
+            "web_fetch": {"enabled": False},
+            "parallel": {"api_key": None},
+        }
+    ],
+    indirect=True,
+)
+async def test_default_search_api_uses_anonymous_mcp_only_when_called(
+    async_test_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    searches = []
+    requests = []
+
+    async def handler(request: web.Request) -> web.StreamResponse:
+        requests.append(request.method)
+        assert "Authorization" not in request.headers
+        if request.method == "GET":
+            return web.Response(status=405)
+        if request.method == "DELETE":
+            return web.Response(status=204)
+        call = await request.json()
+        if call["method"] == "tools/call":
+            searches.append(call["params"])
+        return await _handle_rpc(
+            call,
+            {"url": "https://example.com/voyager", "excerpts": ["Voyager excerpt."]},
+        )
+
+    async with _serve(handler) as url:
+        monkeypatch.setattr(parallel, "_PARALLEL_MCP_URL", url)
+        with monkeypatch.context() as probe:
+
+            def unexpected_service(*args: Any, **kwargs: Any) -> None:
+                pytest.fail(
+                    "capability discovery must not instantiate the search service"
+                )
+
+            probe.setattr(WebSearchService, "__init__", unexpected_service)
+            capabilities = await async_test_client.get("/v1/tools/web-capabilities")
+        assert capabilities.status_code == 200
+        assert capabilities.json() == {
+            "provider": "parallel",
+            "automatic_provider": True,
+            "search_available": True,
+            "fetch_available": False,
+            "search_unavailable_reason": None,
+        }
+        assert not requests
+
+        response = await async_test_client.post(
+            "/v1/tools/web-search", json={"query": "Voyager mission"}
+        )
+
+    assert response.status_code == 200
+    assert response.json()["is_error"] is False
+    assert "Voyager excerpt." in response.text
+    assert searches == [
+        {
+            "name": "web_search",
+            "arguments": {
+                "objective": "Voyager mission",
+                "search_queries": ["Voyager mission"],
+            },
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    "async_test_client",
+    [
+        {"web_search": {"enabled": False, "provider": "parallel"}},
+        {
+            "server": {"network": {"offline_mode": True}},
+            "web_search": {"enabled": True, "provider": "parallel"},
+        },
+    ],
+    indirect=True,
+)
+async def test_disabled_and_offline_search_cannot_call_mcp(
+    async_test_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def unexpected_search(*args: Any, **kwargs: Any) -> None:
+        pytest.fail("disabled or offline search must not call Parallel")
+
+    monkeypatch.setattr(
+        parallel.ParallelSearchProvider, "make_query", unexpected_search
+    )
+    capabilities = await async_test_client.get("/v1/tools/web-capabilities")
+    assert capabilities.status_code == 200
+    assert capabilities.json()["search_available"] is False
+
+    response = await async_test_client.post(
+        "/v1/tools/web-search", json={"query": "Voyager mission"}
+    )
+    assert response.status_code == 200
+    assert response.json()["is_error"] is True
+
+
+@pytest.mark.parametrize(
+    "async_test_client",
+    [{"web_search": {"provider": "auto"}}],
+    indirect=True,
+)
+async def test_missing_mcp_extra_is_reported_without_search(
+    async_test_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(sys.modules, "mcp.client.streamable_http", None)
+    response = await async_test_client.get("/v1/tools/web-capabilities")
+
+    assert response.status_code == 200
+    assert response.json()["search_available"] is False
+    assert "tool-mcp" in response.json()["search_unavailable_reason"]
 
 
 @pytest.mark.parametrize("redirect_on", ["tools/call", "DELETE"])

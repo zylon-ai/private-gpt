@@ -320,9 +320,11 @@ database_query:
   max_mb_result: ${PGPT_DATABASE_QUERY_MAX_MB_RESULT:150}
 
 web_search:
-  enabled: ${PGPT_WEBSEARCH_ENABLED:false}
-  provider: ${PGPT_WEBSEARCH_PROVIDER:mock}
-  processor: ${PGPT_WEBSEARCH_PROCESSOR:best_links}
+  # Auto makes Parallel search available on a standard online install.
+  # An explicitly selected provider still requires explicit enablement.
+  enabled: ${PGPT_WEBSEARCH_ENABLED:auto}
+  provider: ${PGPT_WEBSEARCH_PROVIDER:auto}
+  processor: ${PGPT_WEBSEARCH_PROCESSOR:auto}
   num_links: ${PGPT_WEBSEARCH_NUM_LINKS:20}
   mode_quality: ${PGPT_WEBSEARCH_MODE_QUALITY:fast}
   cached: ${PGPT_WEBSEARCH_CACHED:false}

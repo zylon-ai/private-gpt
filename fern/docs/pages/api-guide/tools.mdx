@@ -29,7 +29,7 @@ Built-in server tools only require `name` and `type`. Do not provide `inputSchem
 | `semantic_search_v1` | Search ingested documents | Available in `private-gpt[core]` and installs with ingestion support |
 | `tabular_analysis_v1` | Analyze ingested tabular data | Requires `tool-tabular` or `tools` |
 | `database_query_v1` | Query a SQL database | Requires database extras |
-| `web_search_v1` | Search the web | Requires `tool-web-scraping` or `tools` |
+| `web_search_v1` | Search the web | Default Parallel search requires `tool-mcp`, included in `tools` and `core` |
 | `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
 
 Minimal example:

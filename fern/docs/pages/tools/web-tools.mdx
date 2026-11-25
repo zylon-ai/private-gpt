@@ -15,6 +15,7 @@ Built-in web tools include:
 
 - `web_search_v1`
 - `web_fetch_v1`
+- `GET /v1/tools/web-capabilities`
 - `/v1/tools/web-search`
 - `/v1/tools/web-fetch`
 
@@ -24,13 +25,10 @@ Built-in web tools include:
 
 ## How to install
 
-Install requirements:
-
-- `private-gpt[tool-web-scraping]`
-- or `private-gpt[tools]`
-- or `private-gpt[core]`
-
-After installing or updating Playwright, download the required browsers:
+The `core` and `tools` extras include the MCP client for Parallel search.
+For a minimal install, add `private-gpt[tool-mcp]` if the server reports that
+the dependency is missing. For local URL fetching, install
+`private-gpt[tool-web-scraping]` and download the required browsers:
 
 ```bash
 playwright install
@@ -52,9 +50,36 @@ web_fetch:
 
 ---
 
-### Enable web search
+### Search with Parallel
 
-`web_search_v1` and `/v1/tools/web-search` require both web fetch and web search, plus a configured provider.
+On a standard online install with the bundled settings and no search
+configuration, Parallel MCP provides keyless search. The default `simple_text`
+processor returns excerpts directly from Parallel. URL fetching is controlled
+separately by `web_fetch.enabled`.
+
+Workbench starts new chats with Web off. Open the chat’s **Tools** menu to see
+the provider and enable Web. A query is sent to `https://mcp.parallel.ai/mcp`
+when a model actually calls `web_search_v1`, or when an API client explicitly
+calls `POST /v1/tools/web-search` with a query. A model-generated query can
+include information from the conversation. `GET /v1/tools/web-capabilities`
+reports the effective provider and local tool availability without sending a
+search query.
+
+Anonymous searches use Parallel MCP’s free-tier limits. If Parallel limits a
+request, the tool returns a search error. Try again later or set
+`PGPT_PARALLEL_API_KEY` for authenticated access and its associated limits.
+
+<Note>
+  An upgrade that picks up the new bundled settings can make direct search
+  available whenever the deployment has left search unconfigured. Set
+  `PGPT_WEBSEARCH_ENABLED=false` or `web_search.enabled: false` to keep search
+  disabled. Set `PGPT_OFFLINE_MODE=true` to block live search and URL fetching.
+</Note>
+
+### Choose a different provider
+
+Set the provider and enable search in your backend configuration. For example,
+Brave with the `best_links` result processor also needs URL fetching:
 
 ```yaml
 web_fetch:
@@ -64,46 +89,14 @@ web_search:
   enabled: true
   provider: brave
   processor: best_links
-  num_links: 20
-  mode_quality: fast
-  cached: false
-  context_token: 0
 
 brave:
   api_key: ${PGPT_BRAVE_API_KEY:}
-  rate_limit: 1
 ```
 
-<Note>
-  `web_search` depends on web fetching, so `web_fetch.enabled` must also be `true`.
-</Note>
-
----
-
-### Search with Parallel
-
-Set `web_search.provider: parallel` to get public sources and excerpts from
-Parallel. This sends search queries to `https://mcp.parallel.ai/mcp`.
-Anonymous search is available within the free-tier limits. Set
-`PGPT_PARALLEL_API_KEY` if your deployment needs higher limits.
-
-Install `private-gpt[tool-mcp]` alongside your web tools dependencies if your
-installation does not already include the MCP extra. The `tools` and `core`
-extras include it.
-
-```yaml
-web_fetch:
-  enabled: true
-
-web_search:
-  enabled: true
-  provider: parallel
-  processor: simple_text
-```
-
-With `simple_text`, the tool returns the provider's excerpts directly. To try
-it on your running server, send `{"query":"NASA Voyager interstellar mission"}`
-to `POST /v1/tools/web-search`, or enable **Web** in a Workbench chat.
+For a fixture-only workflow, choose `mock` with `processor: simple_text`.
+You can also set `PGPT_WEBSEARCH_PROVIDER` and `PGPT_WEBSEARCH_ENABLED` when
+using the bundled configuration.
 
 ### Settings
 
