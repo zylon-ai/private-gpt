@@ -78,19 +78,21 @@ def get_guest_mime_type(file_data: Path) -> str | None:
 
 
 def get_actual_mime_type(file_data: Path) -> str | None:
-    from private_gpt.utils.mime import is_magic_available
+    from private_gpt.utils.mime import is_magic_available, refine_detected_mime
 
     if not is_magic_available():
         return None
     try:
         import magic  # ty:ignore[unresolved-import]
 
-        mime_detector = magic.Magic(mime=True)
-        return mime_detector.from_file(file_data)
+        detected = magic.Magic(mime=True).from_file(file_data)
     except ImportError:
         return None
     except Exception:
         return None
+    if not isinstance(detected, str) or not detected:
+        return None
+    return refine_detected_mime(detected, file_data)
 
 
 def should_ignore_mime_mismatch(guest_mime: str, actual_mime: str) -> bool:
