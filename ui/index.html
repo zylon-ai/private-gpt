@@ -6595,6 +6595,14 @@
       return { parallel: "Parallel MCP", brave: "Brave", mock: "Mock" }[provider] || provider;
     }
 
+    function webSearchToolType(web) {
+      if (web.legacy) return "web_search_v0";
+      if (web.provider === "parallel") {
+        return web.automatic_provider ? "automatic_parallel_web_search_v1" : "explicit_parallel_web_search_v1";
+      }
+      return `${web.provider}_web_search_v1`;
+    }
+
     function renderWebCapabilities() {
       $("#webCapabilitiesStatus").textContent = webCapabilitiesStatus();
     }
@@ -6607,8 +6615,12 @@
       const searchDisclosure = web?.provider === "mock"
         ? "Mock search uses fixture results."
         : `Search queries can include chat context and go to ${provider}.`;
-      const disclosure = fetch ? `${searchDisclosure} URL fetch requests pages from their websites.` : searchDisclosure;
-      const consent = search ? (web.legacy ? "legacy" : web.provider) : null;
+      const selectionDisclosure = web?.provider === "parallel"
+        ? (web.automatic_provider ? " Parallel MCP is the default provider." : " The backend explicitly selected Parallel MCP.")
+        : "";
+      const fetchDisclosure = fetch ? " URL fetch requests pages from their websites." : "";
+      const disclosure = searchDisclosure + selectionDisclosure + fetchDisclosure;
+      const consent = search ? webSearchToolType(web) : null;
       const enabled = Boolean(
         (search || fetch) && chat.settings.enabledWeb
         && (!search || chat.settings.webConsent === consent)
@@ -6633,15 +6645,15 @@
         if (runtime.webCapabilitiesRequest !== request) return null;
         runtime.webCapabilitiesRequest = null;
         runtime.webCapabilities = web;
-        if (!web.error) {
+        if (!web.error && !web.legacy) {
           const migratedChats = state.chats.filter(chat => chat.settings.enabledWeb && chat.settings.webConsent === undefined);
           if (migratedChats.length) {
-            // On the first capability check, carry forward only an available, explicitly configured provider.
-            const consent = web.search_available && !web.automatic_provider ? web.provider : null;
+            // Record only a verified explicit selection, even while search is unavailable.
+            const consent = web.automatic_provider ? null : webSearchToolType(web);
             migratedChats.forEach(chat => {
               chat.settings.webConsent = consent;
               // The old Web toggle explicitly included URL fetch.
-              chat.settings.webFetchConsent = !web.legacy;
+              chat.settings.webFetchConsent = true;
             });
             saveState();
           }
@@ -7335,10 +7347,7 @@
         tools.push({ name: "code_execution", type: "code_execution_v1" });
       }
       if (web?.enabled) {
-        if (web.search) {
-          const type = web.consent === "legacy" ? "web_search_v0" : `${web.consent}_web_search_v1`;
-          tools.push({ name: "web_search", type });
-        }
+        if (web.consent) tools.push({ name: "web_search", type: web.consent });
         if (web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });
       }
       if (featureEnabled("databases")) {

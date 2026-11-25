@@ -142,6 +142,15 @@ async def mock_llm(
             ("brave", "web_search_v0", "Review the current provider"),
             ("auto", "web_search_v1", "Select the search provider"),
             ("auto", "parallel_web_search_v1", None),
+            ("parallel", "explicit_parallel_web_search_v1", None),
+            ("auto", "explicit_parallel_web_search_v1", "provider selection changed"),
+            (
+                "parallel",
+                "automatic_parallel_web_search_v1",
+                "provider selection changed",
+            ),
+            ("auto", "automatic_parallel_web_search_v1", None),
+            ("auto", None, None),
         ]
     ],
     indirect=["async_test_client"],
@@ -150,7 +159,7 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
     async_test_client: AsyncClient,
     injector: MockInjector,
     monkeypatch: pytest.MonkeyPatch,
-    tool_type: str,
+    tool_type: str | None,
     expected_error: str | None,
 ) -> None:
     query = "Cassini spacecraft"
@@ -165,7 +174,9 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
                 )
             ],
             ["Finished."],
-        ],
+        ]
+        if tool_type
+        else [["Finished."]],
     )
     search = AsyncMock(
         return_value=[
@@ -183,12 +194,14 @@ async def test_messages_honors_the_search_provider_in_the_tool_type(
         "/v1/messages",
         json={
             "messages": [{"role": "user", "content": query}],
-            "tools": [{"name": "web_search", "type": tool_type}],
+            "tools": [{"name": "web_search", "type": tool_type}] if tool_type else [],
         },
     )
 
     assert response.status_code == 200, response.text
-    if expected_error is None:
+    if tool_type is None:
+        search.assert_not_awaited()
+    elif expected_error is None:
         search.assert_awaited_once()
         assert search.await_args.args[0] == query
         assert "Cassini excerpt" in response.text

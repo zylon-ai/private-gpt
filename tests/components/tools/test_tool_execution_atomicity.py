@@ -23,8 +23,12 @@ from private_gpt.components.tools.remote_execution import (
     build_rebuild_metadata,
     execute_tool_request,
 )
-from private_gpt.components.tools.tool_execution_outcome import ToolExecutionFailure
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionFailure,
+    ToolExecutionSuccess,
+)
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
+from private_gpt.components.web.web_search.models import WebSearchResult
 from private_gpt.components.web.web_search.providers.brave import BraveSearchProvider
 from private_gpt.components.web.web_search.providers.parallel import (
     ParallelSearchProvider,
@@ -150,19 +154,39 @@ async def test_local_and_celery_schedulers_return_the_same_error_tool_result(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    ("tool_type", "worker_provider", "expected_error"),
+    ("tool_type", "api_provider", "worker_provider", "expected_error"),
     [
-        ("parallel_web_search_v1", "brave", "differs from the expected provider"),
-        ("web_search_v0", "brave", "Review the current provider"),
-        ("web_search_v1", "auto", "Select the search provider"),
+        (
+            "parallel_web_search_v1",
+            "parallel",
+            "brave",
+            "differs from the expected provider",
+        ),
+        ("web_search_v0", "parallel", "brave", "Review the current provider"),
+        ("web_search_v1", "parallel", "auto", "Select the search provider"),
+        (
+            "explicit_parallel_web_search_v1",
+            "parallel",
+            "auto",
+            "provider selection changed",
+        ),
+        ("explicit_parallel_web_search_v1", "parallel", "parallel", None),
+        (
+            "automatic_parallel_web_search_v1",
+            "auto",
+            "parallel",
+            "provider selection changed",
+        ),
+        ("automatic_parallel_web_search_v1", "auto", "auto", None),
     ],
 )
 async def test_worker_honors_the_search_provider_in_a_queued_tool(
     injector: MockInjector,
     monkeypatch: pytest.MonkeyPatch,
     tool_type: str,
+    api_provider: str,
     worker_provider: str,
-    expected_error: str,
+    expected_error: str | None,
 ) -> None:
     task_module = importlib.import_module(
         "private_gpt.celery.tasks.tools.tool_run_task"
@@ -171,7 +195,7 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
         {
             "web_search": {
                 "enabled": True,
-                "provider": "parallel",
+                "provider": api_provider,
                 "processor": "simple_text",
             }
         }
@@ -206,7 +230,15 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
     monkeypatch.setattr(
         web_search_builder, "get_global_injector", lambda: worker_injector.test_injector
     )
-    search = AsyncMock()
+    search = AsyncMock(
+        return_value=[
+            WebSearchResult(
+                url="https://example.org/cassini",
+                title="Cassini",
+                description="Cassini excerpt",
+            )
+        ]
+    )
     monkeypatch.setattr(BraveSearchProvider, "make_query", search)
     monkeypatch.setattr(ParallelSearchProvider, "make_query", search)
 
@@ -216,9 +248,14 @@ async def test_worker_honors_the_search_provider_in_a_queued_tool(
         )
     )
 
-    search.assert_not_awaited()
-    assert isinstance(result.outcome, ToolExecutionFailure)
-    assert expected_error in result.outcome.error.message
+    if expected_error is None:
+        search.assert_awaited_once()
+        assert search.await_args.args[0] == "Cassini spacecraft"
+        assert isinstance(result.outcome, ToolExecutionSuccess)
+    else:
+        search.assert_not_awaited()
+        assert isinstance(result.outcome, ToolExecutionFailure)
+        assert expected_error in result.outcome.error.message
 
 
 @pytest.mark.anyio

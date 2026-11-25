@@ -332,7 +332,7 @@ type ChatSession = {
     enabledDocuments: boolean;
     enabledDatabases: string[];
     enabledWeb: boolean;
-    webConsent?: string | null;
+    webConsent?: string | null; // Approved search tool type, including Parallel selection mode.
     webFetchConsent: boolean;
     enabledMcpServers: string[];
     enabledSkills: string[];
@@ -618,7 +618,7 @@ The current OpenAPI exposes:
 - `POST /v1/tools/web-search`
 - `POST /v1/tools/web-fetch`
 
-The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available tools to chat requests. Workbench sends the provider-specific search type and uses `web_fetch_v1` for URL fetch. Saved chats must turn on Web for the connected backend before using automatically configured Parallel search. Turn Web on again when the search provider changes or the backend adds a web tool that was unavailable when Web was enabled.
+The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available tools to chat requests. Workbench sends the approved search tool type and uses `web_fetch_v1` for URL fetch. Older saved Web-on chats can carry forward an explicitly configured provider. Automatically selected Parallel requires a fresh Web toggle even if the chat previously used explicitly configured Parallel. Turn Web on again when the provider, Parallel selection mode, or backend connection changes, or when the backend adds a web tool that was unavailable when Web was enabled.
 
 ### MCP
 

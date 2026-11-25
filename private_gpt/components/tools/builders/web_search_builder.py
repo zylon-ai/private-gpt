@@ -8,7 +8,7 @@ from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     WEB_SEARCH_TOOL_NAME,
-    WEB_SEARCH_TOOL_PROVIDERS,
+    WEB_SEARCH_TOOL_SCOPES,
     WEB_SEARCH_WORKBENCH_LEGACY_TYPE,
 )
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
@@ -48,8 +48,16 @@ class WebSearchToolBuilder:
         validate: ToolValidationMode = ToolValidationMode.LAZY,
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
-        expected_provider = WEB_SEARCH_TOOL_PROVIDERS.get(type)
+        expected_provider, expected_automatic_provider = WEB_SEARCH_TOOL_SCOPES.get(
+            type, (None, False)
+        )
         legacy_workbench = type == WEB_SEARCH_WORKBENCH_LEGACY_TYPE
+        if expected_provider is not None and expected_automatic_provider is not None:
+            rebuild = rebuild_scoped_web_search_tool
+        elif expected_provider is not None or legacy_workbench:
+            rebuild = rebuild_workbench_web_search_tool
+        else:
+            rebuild = rebuild_web_search_tool
 
         async def validate_search() -> None:
             await self.web_search_service.validate()
@@ -69,7 +77,7 @@ class WebSearchToolBuilder:
                 query,
                 model_id=model_id,
                 expected_provider=expected_provider,
-                require_explicit_provider=expected_provider is None,
+                expected_automatic_provider=expected_automatic_provider,
             )
             return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 
@@ -86,9 +94,7 @@ class WebSearchToolBuilder:
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(
-                rebuild_workbench_web_search_tool
-                if expected_provider is not None or legacy_workbench
-                else rebuild_web_search_tool,
+                rebuild,
                 {
                     "model_id": model_id,
                     "name": name,
@@ -108,4 +114,9 @@ async def rebuild_web_search_tool(**kwargs: Any) -> ToolSpec:
 
 async def rebuild_workbench_web_search_tool(**kwargs: Any) -> ToolSpec:
     # Older workers cannot rebuild these requests as unrestricted web search.
+    return await rebuild_web_search_tool(**kwargs)
+
+
+async def rebuild_scoped_web_search_tool(**kwargs: Any) -> ToolSpec:
+    # A worker that predates scope checks must fail rather than broaden the request.
     return await rebuild_web_search_tool(**kwargs)

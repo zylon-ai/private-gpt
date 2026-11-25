@@ -34,11 +34,12 @@ Built-in server tools only require `name` and `type`. Do not provide `inputSchem
 | `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
 
 Use `parallel_web_search_v1` in Messages to use the default Parallel provider.
-Workbench reads the provider from `GET /v1/tools/web-capabilities` and chooses
-`parallel_web_search_v1`, `brave_web_search_v1`, or `mock_web_search_v1`. These
-types return a tool error if the backend executing the query uses a different
-provider. The generic `web_search_v1` only runs when the operator explicitly
-selected a provider in backend settings.
+The generic `web_search_v1` only runs when the operator explicitly selected a
+provider in backend settings. Workbench reads `GET /v1/tools/web-capabilities`
+and sends a tool type tied to the disclosed provider. For Parallel it uses
+`automatic_parallel_web_search_v1` or `explicit_parallel_web_search_v1`, so the
+API or queue worker checks both the provider and how it was selected before
+sending a query.
 
 Minimal example:
 

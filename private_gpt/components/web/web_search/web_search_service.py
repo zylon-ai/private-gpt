@@ -70,7 +70,7 @@ class WebSearchService:
         model_id: str | None = None,
         *,
         expected_provider: str | None = None,
-        require_explicit_provider: bool = False,
+        expected_automatic_provider: bool | None = None,
         **kwargs: Any,
     ) -> list[WebSearchResult]:
         if (
@@ -82,10 +82,19 @@ class WebSearchService:
                 "Review the current provider before enabling search again."
             )
         await self.validate()
-        if require_explicit_provider and self._settings.web_search.automatic_provider:
+        if (
+            expected_automatic_provider is not None
+            and self._settings.web_search.automatic_provider
+            != expected_automatic_provider
+        ):
+            if expected_provider is None:
+                raise ValueError(
+                    "Select the search provider in the chat tool type or configure it "
+                    "explicitly on the backend before running web search."
+                )
             raise ValueError(
-                "Select the search provider in the chat tool type or configure it "
-                "explicitly on the backend before running web search."
+                "The backend's web search provider selection changed. "
+                "Review the current provider before enabling search again."
             )
 
         provider = type(self._provider).__name__

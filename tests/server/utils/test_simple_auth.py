@@ -7,11 +7,16 @@ NOTE: We are not testing the switch based on the config in
 """
 
 from typing import Annotated
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
 
+from private_gpt.components.web.web_search.models import WebSearchResult
+from private_gpt.components.web.web_search.providers.parallel import (
+    ParallelSearchProvider,
+)
 from private_gpt.server.utils.auth import (
     NOT_AUTHENTICATED,
     _simple_authentication,
@@ -56,3 +61,38 @@ def test_default_auth_working_when_enabled_200(test_client: TestClient) -> None:
         headers={"Authorization": settings().server.auth.secret},
     )
     assert response_success.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "test_client", [{"web_search": {"provider": "auto"}}], indirect=True
+)
+def test_direct_web_search_requires_api_auth_but_no_chat_approval(
+    test_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    search = AsyncMock(
+        return_value=[
+            WebSearchResult(
+                url="https://example.org/voyager",
+                title="Voyager",
+                description="Voyager excerpt",
+            )
+        ]
+    )
+    monkeypatch.setattr(ParallelSearchProvider, "make_query", search)
+
+    response = test_client.post(
+        "/v1/tools/web-search", json={"query": "Voyager mission"}
+    )
+    assert response.status_code == 401
+    search.assert_not_awaited()
+
+    response = test_client.post(
+        "/v1/tools/web-search",
+        headers={"Authorization": settings().server.auth.secret},
+        json={"query": "Voyager mission"},
+    )
+    assert response.status_code == 200
+    assert response.json()["is_error"] is False
+    assert "Voyager excerpt" in response.text
+    search.assert_awaited_once()
+    assert search.await_args.args[0] == "Voyager mission"
