@@ -620,7 +620,7 @@ async def web_fetch(
                 "application/json": {
                     "examples": {
                         "successful_search": {
-                            "summary": "Web search results with sources and text content",
+                            "summary": "Web search with a processor that fetches URLs",
                             "value": {
                                 "content": [
                                     {
@@ -693,17 +693,7 @@ async def web_search(
     request: Request,
     body: WebSearchQueryBody,
 ) -> ToolResponse:
-    """Search the web and get information from multiple sources based on the query.
-
-    Performs a web search using the provided natural language query and returns
-    aggregated results from multiple web sources including:
-    - Source metadata (URL, title, description, favicon)
-    - Full markdown content from each source
-    - Formatted text summaries with content previews
-
-    Returns search results in a structured format with both source objects
-    and text representations for easy consumption.
-    """
+    """Return source metadata and excerpts or fetched content."""
     service = request.state.injector.get(ToolService)
     result = await _execute_tool(
         request,

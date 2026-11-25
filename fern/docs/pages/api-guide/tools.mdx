@@ -391,9 +391,10 @@ curl -X POST http://localhost:8080/v1/tools/semantic-search \
 
 ### Web search
 
-Search the web and get aggregated results:
-
-Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`.
+Search the web and get aggregated results. The default Parallel provider returns
+excerpts and requires `private-gpt[tool-mcp]`, included in `private-gpt[tools]`
+and `private-gpt[core]`. See [Web Tools](/tools/web-tools) to change the provider
+or use a processor that fetches URLs.
 
 ```bash
 curl -X POST http://localhost:8080/v1/tools/web-search \

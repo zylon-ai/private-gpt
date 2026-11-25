@@ -6609,8 +6609,9 @@
       const consent = search && (web.legacy || web.automatic_provider)
         ? JSON.stringify([(state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ""), state.privateGptUsername, web.provider])
         : null;
-      const enabled = Boolean(chat.settings.enabledWeb && (!consent || chat.settings.webConsent === consent));
-      return { search, fetch: web?.legacy || web?.fetch_available, provider, disclosure, consent, enabled };
+      const fetch = web?.legacy || web?.fetch_available;
+      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!consent || chat.settings.webConsent === consent));
+      return { search, fetch, provider, disclosure, consent, enabled };
     }
 
     async function loadWebCapabilities() {
@@ -6619,16 +6620,18 @@
       let web;
       try {
         web = await apiFetch("/v1/tools/web-capabilities", {}, { label: "Check web tools" });
-        if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean") {
+        if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean"
+            || typeof web?.automatic_provider !== "boolean" || typeof web?.provider !== "string") {
           web = { error: true };
         }
       } catch (error) {
         web = error.status === 404 ? { legacy: true } : { error: true };
       }
-      if (runtime.webCapabilitiesRequest !== request) return;
+      if (runtime.webCapabilitiesRequest !== request) return false;
       runtime.webCapabilities = web;
       renderWebCapabilities();
       if (runtime.view === "chat") renderToolMenu();
+      return true;
     }
 
     async function apiFetch(path, { method = "GET", body, headers = {} } = {}, debugMeta = {}) {
@@ -7079,7 +7082,10 @@
     }
 
     async function requestAssistant(chat, depth, mergeIntoMessage = null) {
-      const body = buildChatBody(chat);
+      // The same backend URL can start using a different provider after a restart.
+      const web = featureEnabled("web") && chat.settings.enabledWeb && await loadWebCapabilities()
+        ? webToolsForChat(chat) : null;
+      const body = buildChatBody(chat, web);
 
       // When merging into a parent message, update it in-place; otherwise create a new streaming message.
       let displayMessage;
@@ -7274,7 +7280,7 @@
       return merged;
     }
 
-    function buildChatBody(chat) {
+    function buildChatBody(chat, web) {
       const hasDocs = normalizeDocumentBackedSettings(chat);
       const documentsEnabled = hasDocs && Boolean(chat.settings.enabledDocuments);
       const tabularEnabled = hasDocs && Boolean(chat.settings.enabledTabular);
@@ -7305,10 +7311,9 @@
       if (chat.settings.enabledCodeExecution) {
         tools.push({ name: "code_execution", type: "code_execution_v1" });
       }
-      if (featureEnabled("web")) {
-        const web = webToolsForChat(chat);
-        if (web.enabled && web.search) tools.push({ name: "web_search", type: "web_search_v1" });
-        if (web.enabled && web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });
+      if (web?.enabled) {
+        if (web.search) tools.push({ name: "web_search", type: "web_search_v1" });
+        if (web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });
       }
       if (featureEnabled("databases")) {
         selectedItems(state.context.databases, chat.settings.enabledDatabases).forEach(db => {

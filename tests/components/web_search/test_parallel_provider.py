@@ -158,7 +158,7 @@ async def test_default_search_api_uses_anonymous_mcp_only_when_called(
             return web.Response(status=204)
         call = await request.json()
         if call["method"] == "tools/call":
-            searches.append(call["params"])
+            searches.append((call["params"]["name"], call["params"]["arguments"]))
         return await _handle_rpc(
             call,
             {"url": "https://example.com/voyager", "excerpts": ["Voyager excerpt."]},
@@ -193,13 +193,13 @@ async def test_default_search_api_uses_anonymous_mcp_only_when_called(
     assert response.json()["is_error"] is False
     assert "Voyager excerpt." in response.text
     assert searches == [
-        {
-            "name": "web_search",
-            "arguments": {
+        (
+            "web_search",
+            {
                 "objective": "Voyager mission",
                 "search_queries": ["Voyager mission"],
             },
-        }
+        )
     ]
 
 

@@ -3129,7 +3129,7 @@
                 },
                 "examples": {
                   "successful_search": {
-                    "summary": "Web search results with sources and text content",
+                    "summary": "Web search with a processor that fetches URLs",
                     "value": {
                       "content": [
                         {
