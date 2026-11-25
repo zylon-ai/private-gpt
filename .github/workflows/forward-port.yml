@@ -1,0 +1,35 @@
+name: Forward-port maintenance fixes
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: ['release/**']
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: forward-port-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  forward-port:
+    if: github.event.pull_request.merged == true && github.event.repository.is_template != true
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.PAT }}
+    steps:
+      - name: Require the release automation token
+        run: |
+          test -n "$RELEASE_TOKEN" || { echo 'Configure CI_GITHUB_TOKEN (or the legacy PAT secret).' >&2; exit 1; }
+      # Only trusted trunk code is executed. The source PR is read as a git diff.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ env.RELEASE_TOKEN }}
+      - name: Open a code-only PR onto the release trunk
+        env:
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+        run: python3 .github/scripts/release_policy.py forward-port
