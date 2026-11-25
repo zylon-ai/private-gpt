@@ -4508,6 +4508,7 @@
         enabledDocuments: true,
         enabledDatabases: [],
         enabledWeb: false,
+        webFetchConsent: false,
         enabledTabular: false,
         enabledCodeExecution: false,
         enabledMcpServers: [],
@@ -5404,6 +5405,7 @@
         knowledgeRows.push(toggleRow(label, web.enabled, checked => {
           chat.settings.enabledWeb = checked;
           chat.settings.webConsent = checked ? web.consent : null;
+          chat.settings.webFetchConsent = checked && Boolean(web.fetch);
           touchChat(chat);
           saveState();
         }, !web.search && !web.fetch));
@@ -6601,12 +6603,17 @@
       const web = runtime.webCapabilities;
       const search = web?.legacy || web?.search_available;
       const provider = web?.legacy ? "the backend’s configured provider" : webProviderName(web?.provider);
-      const disclosure = web?.provider === "mock"
+      const fetch = web?.legacy || web?.fetch_available;
+      const searchDisclosure = web?.provider === "mock"
         ? "Mock search uses fixture results."
         : `Search queries can include chat context and go to ${provider}.`;
+      const disclosure = fetch ? `${searchDisclosure} URL fetch requests pages from their websites.` : searchDisclosure;
       const consent = search ? (web.legacy ? "legacy" : web.provider) : null;
-      const fetch = web?.legacy || web?.fetch_available;
-      const enabled = Boolean((search || fetch) && chat.settings.enabledWeb && (!search || chat.settings.webConsent === consent));
+      const enabled = Boolean(
+        (search || fetch) && chat.settings.enabledWeb
+        && (!search || chat.settings.webConsent === consent)
+        && (!fetch || chat.settings.webFetchConsent)
+      );
       return { search, fetch, provider, disclosure, consent, enabled };
     }
 
@@ -6631,7 +6638,11 @@
           if (migratedChats.length) {
             // On the first capability check, carry forward only an available, explicitly configured provider.
             const consent = web.search_available && !web.automatic_provider ? web.provider : null;
-            migratedChats.forEach(chat => { chat.settings.webConsent = consent; });
+            migratedChats.forEach(chat => {
+              chat.settings.webConsent = consent;
+              // The old Web toggle explicitly included URL fetch.
+              chat.settings.webFetchConsent = !web.legacy;
+            });
             saveState();
           }
         }
@@ -7819,6 +7830,7 @@
         for (const chat of state.chats) {
           chat.settings.enabledWeb = false;
           chat.settings.webConsent = null;
+          chat.settings.webFetchConsent = false;
         }
         runtime.webCapabilities = null;
         runtime.webCapabilitiesRequest = null;

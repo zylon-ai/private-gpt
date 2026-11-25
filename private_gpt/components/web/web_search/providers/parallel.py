@@ -1,4 +1,5 @@
 import asyncio
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from pydantic import AnyHttpUrl, BaseModel
@@ -49,7 +50,7 @@ class ParallelSearchProvider(BaseWebSearchProvider):
         from httpx2 import AsyncClient
         from mcp import ClientSession, MCPError
         from mcp.client.streamable_http import streamable_http_client
-        from mcp.types import CallToolResult
+        from mcp.types import CallToolResult, TextContent
 
         class ParallelMCPClient(AsyncClient):
             async def delete(self, url: "URL | str", **kwargs: Any) -> "Response":
@@ -65,6 +66,16 @@ class ParallelSearchProvider(BaseWebSearchProvider):
         if self._settings.api_key and self._settings.api_key.strip():
             headers["Authorization"] = f"Bearer {self._settings.api_key.strip()}"
 
+        rate_limited = False
+
+        async def check_rate_limit(response: "Response") -> None:
+            nonlocal rate_limited
+            if (
+                response.request.method == "POST"
+                and response.status_code == HTTPStatus.TOO_MANY_REQUESTS
+            ):
+                rate_limited = True
+
         result = None
         error = None
         async with (
@@ -73,6 +84,7 @@ class ParallelSearchProvider(BaseWebSearchProvider):
                 timeout=self._settings.timeout,
                 trust_env=self._network.proxy.enabled,
                 follow_redirects=False,
+                event_hooks={"response": [check_rate_limit]},
             ) as client,
             streamable_http_client(_PARALLEL_MCP_URL, http_client=client) as (
                 reader,
@@ -93,11 +105,24 @@ class ParallelSearchProvider(BaseWebSearchProvider):
                 error = exc
 
         if error is not None:
+            if rate_limited:
+                raise RuntimeError(
+                    "Parallel web search rate limit reached. Try again later."
+                ) from error
             if isinstance(error, TimeoutError):
                 raise TimeoutError("Parallel web search timed out") from error
             raise RuntimeError(f"Parallel web search failed: {error}") from error
-        if not isinstance(result, CallToolResult) or result.is_error:
-            raise RuntimeError("Parallel web search returned a tool error")
+        if not isinstance(result, CallToolResult):
+            raise RuntimeError("Parallel web search returned an invalid tool response")
+        if result.is_error:
+            detail = " ".join(
+                block.text for block in result.content if isinstance(block, TextContent)
+            ).strip()
+            raise RuntimeError(
+                f"Parallel web search failed: {detail}"
+                if detail
+                else "Parallel web search returned a tool error"
+            )
 
         response = ParallelSearchResponse.model_validate(result.structured_content)
         return [

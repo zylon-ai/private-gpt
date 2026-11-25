@@ -205,6 +205,47 @@ async def test_default_search_api_uses_anonymous_mcp_only_when_called(
 
 @pytest.mark.parametrize(
     "async_test_client",
+    [{"web_search": {"provider": "auto"}, "parallel": {"api_key": None}}],
+    indirect=True,
+)
+@pytest.mark.parametrize("transport_error", [True, False])
+async def test_default_search_reports_anonymous_rate_limit(
+    async_test_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    transport_error: bool,
+) -> None:
+    async def handler(request: web.Request) -> web.StreamResponse:
+        assert "Authorization" not in request.headers
+        if request.method == "GET":
+            return web.Response(status=405)
+        if request.method == "DELETE":
+            return web.Response(status=204)
+        call = await request.json()
+        if call["method"] != "tools/call":
+            return await _handle_rpc(call, {})
+        if transport_error:
+            return web.Response(status=429, text="Search rate limit reached")
+        return await _rpc_response(
+            call,
+            {
+                "content": [{"type": "text", "text": "Search rate limit reached"}],
+                "isError": True,
+            },
+        )
+
+    async with _serve(handler) as url:
+        monkeypatch.setattr(parallel, "_PARALLEL_MCP_URL", url)
+        response = await async_test_client.post(
+            "/v1/tools/web-search", json={"query": "Voyager mission"}
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["is_error"] is True
+    assert "rate limit" in response.text.lower()
+
+
+@pytest.mark.parametrize(
+    "async_test_client",
     [
         {"web_search": {"enabled": False, "provider": "parallel"}},
         {
