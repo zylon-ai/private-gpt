@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: Atlas Cloud
+            slug: providers/atlascloud
+            path: ./docs/pages/providers/atlascloud.mdx
       - section: Integrations
         skip-slug: true
         contents:
