@@ -74,6 +74,28 @@ brave:
   rate_limit: 1
 ```
 
+Or configure `provider: specstream` with [SpecStream](https://specstream.ai/search-api):
+
+```yaml
+web_fetch:
+  enabled: true
+
+web_search:
+  enabled: true
+  provider: specstream
+  processor: best_links
+  num_links: 20
+  mode_quality: fast
+  cached: false
+  context_token: 0
+
+specstream:
+  api_key: ${PGPT_SPECSTREAM_API_KEY:}
+  speed: fast
+  rate_limit: 1
+  timeout: 30
+```
+
 <Note>
   `web_search` depends on web fetching, so `web_fetch.enabled` must also be `true`.
 </Note>
@@ -112,7 +134,7 @@ to `POST /v1/tools/web-search`, or enable **Web** in a Workbench chat.
 | `web_fetch.enabled` | Enables URL fetching and text extraction. |
 | `web_fetch.timeout_seconds` | Timeout for fetching a page. |
 | `web_search.enabled` | Enables web search. |
-| `web_search.provider` | Search provider. Built-in options are `brave`, `mock`, and `parallel`. |
+| `web_search.provider` | Search provider. Built-in options are `brave`, `mock`, `parallel`, and `specstream`. |
 | `web_search.processor` | Post-processing strategy for results. |
 | `web_search.num_links` | Maximum number of fetched search results. |
 | `web_search.mode_quality` | Preset that controls the fast vs accurate parameter block. |
@@ -120,5 +142,9 @@ to `POST /v1/tools/web-search`, or enable **Web** in a Workbench chat.
 | `web_search.context_token` | Optional token budget used by the result processor. `0` disables the limit. |
 | `brave.api_key` | Brave Search API key. Required when using `provider: brave`. |
 | `brave.rate_limit` | Minimum seconds between Brave API requests. |
+| `specstream.api_key` | SpecStream API key. Required when using `provider: specstream`. |
+| `specstream.speed` | Search tier (`fast` or `default`). Defaults to `fast`. |
+| `specstream.rate_limit` | Maximum SpecStream API requests per second. |
+| `specstream.timeout` | Request timeout in seconds for SpecStream API calls. |
 | `parallel.api_key` | Optional Parallel API key. |
 | `parallel.timeout` | Timeout in seconds for searching with Parallel. |

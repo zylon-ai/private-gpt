@@ -351,6 +351,12 @@ brave:
   api_key: ${PGPT_BRAVE_API_KEY:}
   rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
 
+specstream:
+  api_key: ${PGPT_SPECSTREAM_API_KEY:}
+  speed: ${PGPT_SPECSTREAM_SPEED:fast}
+  rate_limit: ${PGPT_SPECSTREAM_RATE_LIMIT:1}
+  timeout: ${PGPT_SPECSTREAM_TIMEOUT:30}
+
 parallel:
   api_key: ${PGPT_PARALLEL_API_KEY:}
   timeout: ${PGPT_PARALLEL_TIMEOUT:30}
