@@ -15,6 +15,11 @@ env:
   PACKAGE_CONSTRAINTS_URL: https://wheels.privategpt.dev/constraints/
   platforms: linux/amd64,linux/arm64
 jobs:
+  image-tag-policy:
+    uses: ./.github/workflows/image-tag-policy.yml
+    permissions:
+      contents: read
+
   build-and-publish-package:
     runs-on: ubuntu-latest
 
@@ -221,7 +226,7 @@ jobs:
         run: gh release upload "${GITHUB_REF_NAME}" bundles/* --clobber
 
   build-and-push-image:
-    needs: build-and-publish-package
+    needs: [build-and-publish-package, image-tag-policy]
     runs-on: ubuntu-latest
 
     permissions:
@@ -265,7 +270,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ needs.image-tag-policy.outputs.publish-latest == 'true' }}
             type=sha
           flavor: |
             latest=false

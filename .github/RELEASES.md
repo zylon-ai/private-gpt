@@ -52,3 +52,16 @@ The Release policy check should be required by branch protection. Do not use
 Manual tags, manual publication and existing queued workflows are outside this
 policy; drain old release runs during rollout. Artifact deployment/channel
 workflows remain repo-specific and must be reviewed when enabling maintenance.
+
+## Image tags
+
+Only builds dispatched/pushed on `main`, or stable releases targeting `main` whose
+tagged commit belongs to `main`, may publish `latest` (including architecture
+aliases). Maintenance releases publish their version tags only. Docker metadata's
+automatic latest alias is disabled. Manual `latest` requests on other refs fail
+before image jobs start; use a version, SHA, or test tag instead.
+
+Image workflows call `image-tag-policy.yml`, which reads the current policy helper
+from `main`. BOM applies these guards to the tagged image workflows when preparing
+a new maintenance branch, preserving its original build recipe. Existing branches
+need the same workflow update; rerunning a historical tag still uses its old workflow.
