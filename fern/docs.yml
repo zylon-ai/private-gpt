@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: TrustedRouter
+            slug: providers/trustedrouter
+            path: ./docs/pages/providers/trustedrouter.mdx
       - section: Integrations
         skip-slug: true
         contents:

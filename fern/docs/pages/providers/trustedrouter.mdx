@@ -1,0 +1,131 @@
+---
+title: "TrustedRouter"
+description: "Configure PrivateGPT with TrustedRouter for Claude, GPT, Gemini, DeepSeek, GLM and other chat models plus embeddings through one OpenAI-compatible base URL."
+---
+
+[TrustedRouter](https://trustedrouter.com) is a hosted AI API gateway with an OpenAI-compatible endpoint at `https://api.trustedrouter.com/v1`. It serves chat models from Anthropic, OpenAI, Google, DeepSeek, Z.ai, Qwen and others, plus embedding models, so you can switch the model PrivateGPT answers with by changing a model ID. PrivateGPT uses it through the existing OpenAI-compatible integration.
+
+The same endpoint serves chat (`/v1/chat/completions`) and embeddings (`/v1/embeddings`), so no second server is needed. If you want document embeddings computed locally, point `OPENAI_EMBEDDING_API_BASE` at your own embeddings server instead, for example a local [Ollama](/providers/ollama) instance.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ includes `context_length` per model |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+Model-dependent rows follow each model's `supported_parameters` and `architecture.input_modalities` in `/v1/models`. Check those fields for the model you pick.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and pick a chat model">
+    1. Sign in at [trustedrouter.com](https://trustedrouter.com) and create an API key.
+    2. Set `TRUSTEDROUTER_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+
+    ```bash
+    export TRUSTEDROUTER_API_KEY="your-trustedrouter-api-key"
+    ```
+
+    3. List the available model IDs and use one of them unchanged. The model list is public and does not need a key:
+
+    ```bash
+    curl https://api.trustedrouter.com/v1/models
+    ```
+
+    Model IDs are vendor-prefixed, for example `anthropic/claude-sonnet-4.5` or `openai/text-embedding-3-small`. `trustedrouter/auto` routes each request to a suitable model. Endpoints and parameters are documented in the [TrustedRouter docs](https://trustedrouter.com/docs).
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.trustedrouter.com/v1 \
+          OPENAI_API_KEY="$TRUSTEDROUTER_API_KEY" \
+          PGPT_LLM_DEFAULT=trustedrouter/auto \
+          PGPT_EMBEDDING_DEFAULT=openai/text-embedding-3-small \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.trustedrouter.com/v1 \
+          -e OPENAI_API_KEY="$TRUSTEDROUTER_API_KEY" \
+          -e PGPT_LLM_DEFAULT=trustedrouter/auto \
+          -e PGPT_EMBEDDING_DEFAULT=openai/text-embedding-3-small \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.trustedrouter.com/v1 \
+          OPENAI_API_KEY="$TRUSTEDROUTER_API_KEY" \
+          PGPT_LLM_DEFAULT=trustedrouter/auto \
+          PGPT_EMBEDDING_DEFAULT=openai/text-embedding-3-small \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+`/v1/models` returns `context_length` for each model, so PrivateGPT can set the context window automatically. To pin a fixed set of models, list them in a profile. The `context_window` values below are the ones `/v1/models` reports.
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: trustedrouter/auto
+
+models:
+  - name: trustedrouter/auto
+    type: llm
+    mode: openai
+    context_window: 1048576
+    support_tools: true
+
+  - name: anthropic/claude-sonnet-4.5
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+
+  - name: z-ai/glm-5.3
+    type: llm
+    mode: openai
+    context_window: 1048576
+    support_tools: true
+    support_reasoning: true
+```
+
+Run with the profile:
+
+```bash
+OPENAI_API_BASE=https://api.trustedrouter.com/v1 \
+  OPENAI_API_KEY="$TRUSTEDROUTER_API_KEY" \
+  PGPT_EMBEDDING_DEFAULT=openai/text-embedding-3-small \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## Notes
+
+- **Model IDs** come from `/v1/models` and include the vendor prefix. `/v1/models` lists chat and embedding models together; set `PGPT_LLM_DEFAULT` to a chat model and `PGPT_EMBEDDING_DEFAULT` to an embedding model (`architecture.modality` is `text->embedding`).
+- **Hosted embeddings** mean document text is sent to the API at ingest time, and retrieved excerpts are sent with each chat prompt. Use a local embeddings server if documents must stay on your machine during ingestion.
+- TrustedRouter also exposes `/v1/responses` and an Anthropic Messages-compatible `/v1/messages`. PrivateGPT uses the OpenAI-compatible chat endpoint, and Claude models are available on it too.
