@@ -73,3 +73,40 @@ def test_email_reader_keeps_both_halves_of_a_body_split_by_an_inline_image() -> 
     body, _ = _body(message)
 
     assert body == "First half of the message.\n\nSecond half after the image."
+
+
+def test_email_reader_drops_a_mobile_signature_line() -> None:
+    message = _message()
+    message.set_content("Running late, start without me.\n\nSent from my iPhone")
+
+    body, _ = _body(message)
+
+    assert body == "Running late, start without me."
+
+
+def test_email_reader_keeps_the_quoted_message_after_a_mobile_signature() -> None:
+    message = _message()
+    message.set_content(
+        "Thanks, see you then.\n\nSent from my iPhone\n\n"
+        "On Mon, 3 Nov 2025, Bob wrote:\n> The meeting moved to Room 4."
+    )
+
+    body, _ = _body(message)
+
+    assert body == (
+        "Thanks, see you then.\n\n"
+        "On Mon, 3 Nov 2025, Bob wrote:\nThe meeting moved to Room 4."
+    )
+
+
+def test_email_reader_keeps_text_that_mentions_sent_from_my() -> None:
+    message = _message()
+    message.set_content(
+        "Please sign the contract sent from my lawyer.\n\nThe deadline is Friday."
+    )
+
+    body, _ = _body(message)
+
+    assert body == (
+        "Please sign the contract sent from my lawyer.\n\nThe deadline is Friday."
+    )
