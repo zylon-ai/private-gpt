@@ -24,7 +24,7 @@ jobs:
         run: |
           test -n "$RELEASE_TOKEN" || { echo 'Configure CI_GITHUB_TOKEN (or the legacy PAT secret).' >&2; exit 1; }
       # Only trusted trunk code is executed. The source PR is read as a git diff.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
