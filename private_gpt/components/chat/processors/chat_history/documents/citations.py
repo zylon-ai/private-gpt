@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from llama_index.core.base.llms.types import (
     ChatMessage,
@@ -19,6 +19,7 @@ async def process_chat_history_with_documents(
     chat_history: list[ChatMessage] | None,
     documents: list[Document] | None = None,
     deduplicate_documents: bool = True,
+    deduplicate_keep: Literal["first", "last"] = "first",
     force_to_return_citations: bool = False,
     add_context_to_system_prompt: bool = False,
     **kwargs: dict[str, Any],
@@ -45,10 +46,10 @@ async def process_chat_history_with_documents(
 
     if deduplicate_documents and chat_history:
         # Deduplicate documents in the chat history to avoid sending the
-        # same document multiple times to the LLM, keeping only the last
-        # occurrence of each document so that the most recent version and
-        # context of each document is preserved.
-        chat_history = await deduplicate_documents_in_history(chat_history)
+        # same document multiple times to the LLM.
+        chat_history = await deduplicate_documents_in_history(
+            chat_history, keep=deduplicate_keep
+        )
 
     if add_context_to_system_prompt and chat_history:
         # We need to remove the context from the chat history

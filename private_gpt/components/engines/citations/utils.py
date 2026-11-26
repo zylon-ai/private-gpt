@@ -4,7 +4,7 @@ import random
 import re
 import string
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.core.schema import MetadataMode, NodeWithScore
@@ -279,16 +279,19 @@ def extract_citations_by_original_text(
 async def deduplicate_documents_in_history(
     chat_history: list[ChatMessage] | None,
     prompt_builder_service: Any | None = None,
+    keep: Literal["first", "last"] = "first",
 ) -> list[ChatMessage] | None:
+    """Drop repeated documents; "first" leaves earlier messages unchanged."""
     if not chat_history:
         return chat_history
 
-    last_seen: dict[str, int] = {}
+    kept_at: dict[str, int] = {}
     for i, msg in enumerate(chat_history):
         for doc in await extract_sources_from_history([msg]):
-            last_seen[doc.id_] = i
+            if keep == "last" or doc.id_ not in kept_at:
+                kept_at[doc.id_] = i
 
-    if not last_seen:
+    if not kept_at:
         return chat_history
 
     if prompt_builder_service is None:
@@ -309,7 +312,7 @@ async def deduplicate_documents_in_history(
                     block.sources = [
                         s
                         for s in block.sources
-                        if last_seen.get(Document.from_source(s).id_) == i
+                        if kept_at.get(Document.from_source(s).id_) == i
                     ]
 
             documents = [
@@ -335,6 +338,13 @@ async def deduplicate_documents_in_history(
                             "in a later message and have been intentionally removed to avoid duplication. "
                             "This is not an error — do not retry this tool call. "
                             "Use only the sources available in subsequent messages."
+                        )
+                        if keep == "last"
+                        else (
+                            "The documents requested by this tool call were already retrieved "
+                            "in an earlier message and have been intentionally removed to avoid duplication. "
+                            "This is not an error — do not retry this tool call. "
+                            "Use the sources available in previous messages."
                         )
                     )
                 ]
