@@ -313,15 +313,16 @@ class EmailTextReader(TextReader):
         # Remove email forwarding/reply markers
         text = re.sub(r"^>+\s*", "", text, flags=re.MULTILINE)
 
-        # Remove excessive newlines (more than 2 in a row)
-        text = re.sub(r"\n{3,}", "\n\n", text)
-
-        # Preserve signatures but remove mobile signatures
+        # Preserve signatures but remove mobile signatures. Only a line of its
+        # own: the rest of the body, such as a quoted message, can follow it.
         signatures = [
-            r"Sent from my .*",  # Mobile signatures
+            r"^Sent from my .*$",  # Mobile signatures
         ]
 
         for pattern in signatures:
-            text = re.sub(pattern, "", text, flags=re.DOTALL | re.IGNORECASE)
+            text = re.sub(pattern, "", text, flags=re.MULTILINE | re.IGNORECASE)
+
+        # Remove excessive newlines (more than 2 in a row)
+        text = re.sub(r"\n{3,}", "\n\n", text)
 
         return text.strip()
