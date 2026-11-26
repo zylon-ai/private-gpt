@@ -294,6 +294,45 @@ async def test_runner_waits_for_all_parallel_tools_before_resuming() -> None:
 
 
 @pytest.mark.asyncio
+async def test_runner_does_not_resume_until_the_last_parallel_tool_reports() -> None:
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-partial",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-1": "job-1", "tool-2": "job-2"}
+            ),
+            checkpoint_id="partial-checkpoint",
+        )
+    )
+    chat_scheduler = MagicMock()
+    chat_scheduler.resume = AsyncMock()
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+
+    await runner.callback(
+        execution_id="execution-partial",
+        tool_id="tool-1",
+        result=_tool_response("tool-1").model_dump(mode="json"),
+    )
+    chat_scheduler.resume.assert_not_awaited()
+
+    await runner.callback(
+        execution_id="execution-partial",
+        tool_id="tool-2",
+        result=_tool_response("tool-2").model_dump(mode="json"),
+    )
+    chat_scheduler.resume.assert_awaited_once_with(
+        execution_id="execution-partial",
+        checkpoint_id="partial-checkpoint",
+    )
+
+
+@pytest.mark.asyncio
 async def test_runner_does_not_cancel_timeout_for_unknown_tool_result() -> None:
     checkpoint_store = InMemoryChatCheckpointStore()
     await checkpoint_store.save(
