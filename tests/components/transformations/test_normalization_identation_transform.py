@@ -288,3 +288,40 @@ def test_keep_lines_that_only_start_with_a_list_marker_character(line: str) -> N
     normalizer = MarkdownNormalizer(target_indent=2)
     content = f"Intro\n\n{line}\n\nOutro"
     assert normalizer.normalize_markdown(content) == content
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "~~~markdown\nTitle\n=====\n#include <stdio.h>\n  - nested\n~~~",
+        "````markdown\n```python\nTitle\n-----\n```\n````",
+    ],
+)
+def test_preserve_tilde_and_nested_fenced_code_blocks(content: str) -> None:
+    """Test that tilde and multi-backtick fenced blocks are preserved untouched."""
+    normalizer = MarkdownNormalizer(target_indent=2)
+    assert normalizer.normalize_markdown(content) == content
+
+
+def test_code_block_lists_do_not_pollute_outer_list_levels() -> None:
+    """Test that indented lists inside fenced code do not shift outer list levels."""
+    normalizer = MarkdownNormalizer(target_indent=2)
+    content = (
+        "```yaml\n"
+        " - code item 1\n"
+        "   - code item 2\n"
+        "```\n\n"
+        "- Outer\n"
+        "    - Nested\n"
+        "        - Deep"
+    )
+    expected = (
+        "```yaml\n"
+        " - code item 1\n"
+        "   - code item 2\n"
+        "```\n\n"
+        "- Outer\n"
+        "  - Nested\n"
+        "    - Deep"
+    )
+    assert normalizer.normalize_markdown(content) == expected
