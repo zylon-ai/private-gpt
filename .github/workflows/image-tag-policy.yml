@@ -1,0 +1,27 @@
+name: Image tag policy
+on:
+  workflow_call:
+    outputs:
+      publish-latest:
+        description: Whether this source may publish latest image aliases
+        value: ${{ jobs.check.outputs.publish-latest }}
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    outputs:
+      publish-latest: ${{ steps.policy.outputs.result }}
+    steps:
+      # Read current policy from main; the event/SHA still identify the caller's source.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/github-script@v8
+        id: policy
+        with:
+          script: |
+            const check = require('./.github/scripts/image-tag-policy.cjs');
+            return await check({context, github});

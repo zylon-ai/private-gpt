@@ -14,7 +14,10 @@
     ".github/release-policy.json",
     ".github/scripts/test_release_policy.py",
     ".github/workflows/post-release-please.yml",
-    ".github/workflows/release-hooks.yml"
+    ".github/workflows/release-hooks.yml",
+    ".github/scripts/image-tag-policy.cjs",
+    ".github/scripts/test_image_tags.cjs",
+    ".github/workflows/image-tag-policy.yml"
   ],
   "metadata": [
     ".github/release_please/.release-please-config.json",
@@ -37,5 +40,8 @@
   "legacy-manifests": [
     ".github/release_please/.release-please-manifest.json"
   ],
-  "template-repository": "zylon-ai/zylon-base-template"
+  "template-repository": "zylon-ai/zylon-base-template",
+  "image-workflows": [
+    ".github/workflows/generate-release.yml"
+  ]
 }

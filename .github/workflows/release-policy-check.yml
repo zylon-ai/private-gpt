@@ -23,3 +23,5 @@ jobs:
         run: python3 .github/scripts/release_policy.py validate --branch "$TARGET_BRANCH"
       - name: Test policy and real-git forward-port behavior
         run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
+      - name: Test main-only image tags
+        run: node --test .github/scripts/test_image_tags.cjs
