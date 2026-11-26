@@ -19,8 +19,33 @@ class MarkdownNormalizer:
             "bold_line": r"^\s*\*\*([^*]+)\*\*(.*)$",
             "heading_underline_1": r"^=+$",  # Pattern for level 1 header underline
             "heading_underline_2": r"^-+$",  # Pattern for level 2 header underline
-            "code_block": r"^```",  # Pattern for code blocks
+            "code_block": r"^ {0,3}(`{3,}|~{3,})",  # Opening/closing fenced code block
         }
+
+    def _update_fence_state(
+        self,
+        line: str,
+        active_fence: tuple[str, int] | None,
+    ) -> tuple[tuple[str, int] | None, bool]:
+        """Update fenced code block state using CommonMark fence char/length rules."""
+        match = re.match(self.PATTERNS["code_block"], line)
+        if active_fence is None:
+            if not match:
+                return None, False
+            marker = match.group(1)
+            if marker[0] == "`" and "`" in line[match.end() :]:
+                return None, False
+            return (marker[0], len(marker)), True
+
+        fence_char, min_len = active_fence
+        if (
+            match
+            and match.group(1)[0] == fence_char
+            and len(match.group(1)) >= min_len
+            and not line[match.end() :].strip()
+        ):
+            return None, True
+        return active_fence, True
 
     def _normalize_indent(self, indent: str) -> int:
         """Convert tabs to spaces and return the length."""
@@ -31,8 +56,13 @@ class MarkdownNormalizer:
     def _precalculate_levels(self, lines: list[str]) -> dict[int, int]:
         level_mapping = {}
         sorted_indents: list[int] = []
+        active_fence: tuple[str, int] | None = None
 
         for line in lines:
+            active_fence, in_code_block = self._update_fence_state(line, active_fence)
+            if in_code_block:
+                continue
+
             if re.match(self.PATTERNS["bold_line"], line):
                 continue
 
@@ -56,31 +86,27 @@ class MarkdownNormalizer:
         level_mapping = self._precalculate_levels(lines)
 
         i = 0
-        in_code_block = False
+        active_fence: tuple[str, int] | None = None
         code_block_lines: list[str] = []
 
         while i < len(lines):
             current_line = lines[i]
+            was_in_code = active_fence is not None
+            active_fence, in_fence_line = self._update_fence_state(
+                current_line, active_fence
+            )
 
             # Handle code blocks
-            if re.match(self.PATTERNS["code_block"], current_line.strip()):
-                if in_code_block:
-                    # End of code block
-                    in_code_block = False
-                    # Process and add the code block content
+            if in_fence_line:
+                if not was_in_code:
+                    normalized_lines.append(current_line)
+                elif active_fence is None:
                     normalized_lines.extend(code_block_lines)
                     code_block_lines = []
                     normalized_lines.append(current_line)
                 else:
-                    # Start of code block
-                    in_code_block = True
-                    normalized_lines.append(current_line)
-                i += 1
-                continue
-
-            if in_code_block:
-                # Store code block content, stripping right whitespace only
-                code_block_lines.append(current_line.rstrip())
+                    # Store code block content, stripping right whitespace only
+                    code_block_lines.append(current_line.rstrip())
                 i += 1
                 continue
 
@@ -153,6 +179,9 @@ class MarkdownNormalizer:
                 normalized_lines.append(current_line.rstrip())
 
             i += 1
+
+        if code_block_lines:
+            normalized_lines.extend(code_block_lines)
 
         normalized_content = "\n".join(normalized_lines)
         normalized_content = re.sub(r"\n{3,}", "\n\n", normalized_content)
