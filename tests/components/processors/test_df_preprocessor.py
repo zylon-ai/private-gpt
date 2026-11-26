@@ -266,3 +266,55 @@ def test_complex_preprocessing_scenario():
         result["Sales_1"]
     )  # numeric ratio is lower than 0.8
     assert pd.api.types.is_numeric_dtype(result["Sales_2"])
+
+
+def test_duplicate_headers_avoid_existing_suffixed_collisions() -> None:
+    """Test that duplicate header renaming never collides with pre-existing suffixes."""
+    processor = DataFramePreprocessor()
+
+    assert processor._rename_duplicate_headers(["A", "A_1", "A"]) == [
+        "A_2",
+        "A_1",
+        "A_3",
+    ]
+    assert processor._rename_duplicate_headers(["A_1", "A", "A"]) == [
+        "A_1",
+        "A_2",
+        "A_3",
+    ]
+    assert processor._rename_duplicate_headers(["A", "A", "A_2"]) == [
+        "A_1",
+        "A_3",
+        "A_2",
+    ]
+    assert processor._rename_duplicate_headers(["A", "A_1", "A_1", "A"]) == [
+        "A_2",
+        "A_1_1",
+        "A_1_2",
+        "A_3",
+    ]
+
+
+def test_preprocess_table_with_colliding_duplicate_headers() -> None:
+    """Test table preprocessing when headers collide with suffixed names or blanks."""
+    processor = DataFramePreprocessor()
+
+    df = pd.DataFrame(
+        [
+            ["Score", "Score_1", "Score"],
+            ["1", "2", "3"],
+            ["4", "5", "6"],
+        ]
+    )
+    result = processor.preprocess_table(df)
+    assert list(result.columns) == ["Score_2", "Score_1", "Score_3"]
+    assert all(pd.api.types.is_numeric_dtype(result[col]) for col in result.columns)
+
+    table_result = processor.preprocess_table_data(
+        rows=[["1", "2", "3"], ["4", "5", "6"]],
+        headers=["Unknown", "Unknown_1", ""],
+    )
+    assert list(table_result.columns) == ["Unknown_2", "Unknown_1", "Unknown_3"]
+    assert all(
+        pd.api.types.is_numeric_dtype(table_result[col]) for col in table_result.columns
+    )

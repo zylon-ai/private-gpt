@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from collections import Counter
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -187,23 +188,25 @@ class DataFramePreprocessor:
         return processed_columns
 
     def _rename_duplicate_headers(self, columns: list[str]) -> list[str]:
-        """Rename duplicate column names."""
-        seen: dict[str, int] = {}
+        """Rename duplicate column names without colliding with existing names."""
+        counts = Counter(columns)
+        used = set(columns)
+        next_index: dict[str, int] = {}
         processed_columns = []
 
-        for i, col in enumerate(columns):
-            if col not in seen:
-                seen[col] = 1
+        for col in columns:
+            if counts[col] == 1:
                 processed_columns.append(col)
                 continue
 
-            if seen[col] == 1:
-                for j in range(i - 1, -1, -1):
-                    if columns[j] == col:
-                        processed_columns[j] = f"{col}_{seen[col]}"
-                        break
-            seen[col] += 1
-            processed_columns.append(f"{col}_{seen[col]}")
+            idx = next_index.get(col, 1)
+            candidate = f"{col}_{idx}"
+            while candidate in used:
+                idx += 1
+                candidate = f"{col}_{idx}"
+            next_index[col] = idx + 1
+            used.add(candidate)
+            processed_columns.append(candidate)
 
         return processed_columns
 
