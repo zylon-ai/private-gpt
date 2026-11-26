@@ -6,7 +6,11 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
-from private_gpt.components.tools.tool_names import WEB_SEARCH_TOOL_NAME
+from private_gpt.components.tools.tool_names import (
+    WEB_SEARCH_TOOL_NAME,
+    WEB_SEARCH_TOOL_SCOPES,
+    WEB_SEARCH_WORKBENCH_LEGACY_TYPE,
+)
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.components.web.web_search.web_search_service import WebSearchService
@@ -44,16 +48,37 @@ class WebSearchToolBuilder:
         validate: ToolValidationMode = ToolValidationMode.LAZY,
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
+        expected_provider, expected_automatic_provider = WEB_SEARCH_TOOL_SCOPES.get(
+            type, (None, False)
+        )
+        legacy_workbench = type == WEB_SEARCH_WORKBENCH_LEGACY_TYPE
+        if expected_provider is not None and expected_automatic_provider is not None:
+            rebuild = rebuild_scoped_web_search_tool
+        elif expected_provider is not None or legacy_workbench:
+            rebuild = rebuild_workbench_web_search_tool
+        else:
+            rebuild = rebuild_web_search_tool
+
         async def validate_search() -> None:
             await self.web_search_service.validate()
 
         async def run_tool(query: str) -> list[ResultContentBlockType]:
+            if legacy_workbench:
+                raise ValueError(
+                    "Workbench could not identify the web search provider. "
+                    "Review the current provider before enabling search again."
+                )
             if validate == ToolValidationMode.LAZY:
                 # It is not validated because that would imply another call;
                 # it is validated directly by making the query.
                 pass
 
-            results = await self.web_search_service.search(query, model_id=model_id)
+            results = await self.web_search_service.search(
+                query,
+                model_id=model_id,
+                expected_provider=expected_provider,
+                expected_automatic_provider=expected_automatic_provider,
+            )
             return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 
         if validate == ToolValidationMode.EAGER:
@@ -69,7 +94,7 @@ class WebSearchToolBuilder:
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(
-                rebuild_web_search_tool,
+                rebuild,
                 {
                     "model_id": model_id,
                     "name": name,
@@ -85,3 +110,13 @@ class WebSearchToolBuilder:
 async def rebuild_web_search_tool(**kwargs: Any) -> ToolSpec:
     builder = get_global_injector().get(WebSearchToolBuilder)
     return await builder.build_tool(**cast(Any, kwargs))
+
+
+async def rebuild_workbench_web_search_tool(**kwargs: Any) -> ToolSpec:
+    # Older workers cannot rebuild these requests as unrestricted web search.
+    return await rebuild_web_search_tool(**kwargs)
+
+
+async def rebuild_scoped_web_search_tool(**kwargs: Any) -> ToolSpec:
+    # A worker that predates scope checks must fail rather than broaden the request.
+    return await rebuild_web_search_tool(**kwargs)

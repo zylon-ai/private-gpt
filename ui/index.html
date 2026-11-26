@@ -3527,7 +3527,7 @@
               <div class="panel-head">
                 <div>
                   <h2>Web</h2>
-                  <p class="subtle">Use web search and fetch tools when the PrivateGPT backend has them configured.</p>
+                  <p class="subtle" id="webCapabilitiesStatus" role="status">Checking web tools on the backend.</p>
                 </div>
               </div>
               <div class="settings-card">
@@ -3536,7 +3536,7 @@
                   <p class="subtle">Workbench does not store web provider credentials.</p>
                 </div>
                 <div>
-                  <p class="subtle">The PrivateGPT backend sends search queries to its configured provider. Configure the provider and any required credentials on the backend. Enable Web in a chat's Tools menu to include the `web_search` and `web_fetch` tools in that request.</p>
+                  <p class="subtle">Web is off in new chats. Enable it in a chat’s Tools menu to let the assistant use the available web tools. Search queries can include chat context and are sent to the backend’s search provider. Change the provider or disable search in the backend settings.</p>
                 </div>
               </div>
             </section>
@@ -4104,6 +4104,8 @@
       citations: new Map(),
       selectedDebugId: null,
       githubStars: null,
+      webCapabilities: null,
+      webCapabilitiesRequest: null,
       onboardingCheckRunning: false,
       appearanceGeneration: {
         activePrefix: null,
@@ -4506,6 +4508,7 @@
         enabledDocuments: true,
         enabledDatabases: [],
         enabledWeb: false,
+        webFetchConsent: false,
         enabledTabular: false,
         enabledCodeExecution: false,
         enabledMcpServers: [],
@@ -4793,6 +4796,7 @@
       });
       renderDocuments();
       renderDatabases();
+      renderWebCapabilities();
       renderMcp();
       renderSkills();
       renderCustomTools();
@@ -5396,9 +5400,19 @@
         }, !hasDocs)
       ];
       if (featureEnabled("web")) {
-        knowledgeRows.push(toggleRow("Web", Boolean(chat.settings.enabledWeb), checked => {
-          chat.settings.enabledWeb = checked; touchChat(chat); saveState();
-        }));
+        const web = webToolsForChat(chat);
+        const label = web.search ? `Web · ${web.provider}` : web.fetch ? "Web fetch" : "Web";
+        knowledgeRows.push(toggleRow(label, web.enabled, checked => {
+          chat.settings.enabledWeb = checked;
+          chat.settings.webConsent = checked ? web.consent : null;
+          chat.settings.webFetchConsent = checked && Boolean(web.fetch);
+          touchChat(chat);
+          saveState();
+        }, !web.search && !web.fetch));
+        const status = document.createElement("div");
+        status.className = "menu-empty";
+        status.textContent = web.search ? web.disclosure : webCapabilitiesStatus();
+        knowledgeRows.push(status);
       }
       menu.appendChild(menuGroup("Knowledge", knowledgeRows));
       if (state.enableCodeExecution !== false) {
@@ -6566,6 +6580,92 @@
       return error?.message ?? "Unknown error";
     }
 
+    function webCapabilitiesStatus() {
+      const web = runtime.webCapabilities;
+      if (!web) return "Checking web tools on the backend.";
+      if (web.error) return "Could not check web tools. Check the backend connection.";
+      if (web.legacy) return "This backend does not report which web tools are available.";
+      const search = web.search_available
+        ? `Search provider: ${webProviderName(web.provider)}.`
+        : web.search_unavailable_reason || "Web search is unavailable.";
+      return `${search} URL fetch is ${web.fetch_available ? "available" : "unavailable"}.`;
+    }
+
+    function webProviderName(provider) {
+      return { parallel: "Parallel MCP", brave: "Brave", mock: "Mock" }[provider] || provider;
+    }
+
+    function webSearchToolType(web) {
+      if (web.legacy) return "web_search_v0";
+      if (web.provider === "parallel") {
+        return web.automatic_provider ? "automatic_parallel_web_search_v1" : "explicit_parallel_web_search_v1";
+      }
+      return `${web.provider}_web_search_v1`;
+    }
+
+    function renderWebCapabilities() {
+      $("#webCapabilitiesStatus").textContent = webCapabilitiesStatus();
+    }
+
+    function webToolsForChat(chat) {
+      const web = runtime.webCapabilities;
+      const search = web?.legacy || web?.search_available;
+      const provider = web?.legacy ? "the backend’s configured provider" : webProviderName(web?.provider);
+      const fetch = web?.legacy || web?.fetch_available;
+      const searchDisclosure = web?.provider === "mock"
+        ? "Mock search uses fixture results."
+        : `Search queries can include chat context and go to ${provider}.`;
+      const selectionDisclosure = web?.provider === "parallel"
+        ? (web.automatic_provider ? " Parallel MCP is the default provider." : " The backend explicitly selected Parallel MCP.")
+        : "";
+      const fetchDisclosure = fetch ? " URL fetch requests pages from their websites." : "";
+      const disclosure = searchDisclosure + selectionDisclosure + fetchDisclosure;
+      const consent = search ? webSearchToolType(web) : null;
+      const enabled = Boolean(
+        (search || fetch) && chat.settings.enabledWeb
+        && (!search || chat.settings.webConsent === consent)
+        && (!fetch || chat.settings.webFetchConsent)
+      );
+      return { search, fetch, provider, disclosure, consent, enabled };
+    }
+
+    function loadWebCapabilities() {
+      if (runtime.webCapabilitiesRequest) return runtime.webCapabilitiesRequest;
+      const request = (async () => {
+        let web;
+        try {
+          web = await apiFetch("/v1/tools/web-capabilities", {}, { label: "Check web tools" });
+          if (typeof web?.search_available !== "boolean" || typeof web?.fetch_available !== "boolean"
+              || typeof web?.automatic_provider !== "boolean" || typeof web?.provider !== "string") {
+            web = { error: true };
+          }
+        } catch (error) {
+          web = error.status === 404 ? { legacy: true } : { error: true };
+        }
+        if (runtime.webCapabilitiesRequest !== request) return null;
+        runtime.webCapabilitiesRequest = null;
+        runtime.webCapabilities = web;
+        if (!web.error && !web.legacy) {
+          const migratedChats = state.chats.filter(chat => chat.settings.enabledWeb && chat.settings.webConsent === undefined);
+          if (migratedChats.length) {
+            // Record only a verified explicit selection, even while search is unavailable.
+            const consent = web.automatic_provider ? null : webSearchToolType(web);
+            migratedChats.forEach(chat => {
+              chat.settings.webConsent = consent;
+              // The old Web toggle explicitly included URL fetch.
+              chat.settings.webFetchConsent = true;
+            });
+            saveState();
+          }
+        }
+        renderWebCapabilities();
+        if (runtime.view === "chat") renderToolMenu();
+        return web;
+      })();
+      runtime.webCapabilitiesRequest = request;
+      return request;
+    }
+
     async function apiFetch(path, { method = "GET", body, headers = {} } = {}, debugMeta = {}) {
       const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
       const url = `${base}${path}`;
@@ -7014,7 +7114,12 @@
     }
 
     async function requestAssistant(chat, depth, mergeIntoMessage = null) {
-      const body = buildChatBody(chat);
+      // The same backend URL can start using a different provider after a restart.
+      const checkWeb = featureEnabled("web") && chat.settings.enabledWeb;
+      const capabilities = checkWeb ? await loadWebCapabilities() : null;
+      const connectionChanged = checkWeb && (!capabilities || capabilities !== runtime.webCapabilities);
+      const web = checkWeb && !connectionChanged ? webToolsForChat(chat) : null;
+      const body = buildChatBody(chat, web);
 
       // When merging into a parent message, update it in-place; otherwise create a new streaming message.
       let displayMessage;
@@ -7046,6 +7151,7 @@
       let streamingTextEl = null;
 
       try {
+        if (connectionChanged) throw new Error("The backend connection changed before this message was sent.");
         const response = await apiStreamFetch("/v1/messages", { method: "POST", body }, { label: "Chat message" }, (blocks) => {
           const allBlocks = [...prefixBlocks, ...blocks];
           displayMessage.contentBlocks = allBlocks;
@@ -7209,7 +7315,7 @@
       return merged;
     }
 
-    function buildChatBody(chat) {
+    function buildChatBody(chat, web) {
       const hasDocs = normalizeDocumentBackedSettings(chat);
       const documentsEnabled = hasDocs && Boolean(chat.settings.enabledDocuments);
       const tabularEnabled = hasDocs && Boolean(chat.settings.enabledTabular);
@@ -7240,9 +7346,9 @@
       if (chat.settings.enabledCodeExecution) {
         tools.push({ name: "code_execution", type: "code_execution_v1" });
       }
-      if (featureEnabled("web") && chat.settings.enabledWeb) {
-        tools.push({ name: "web_search", type: "web_search_v1" });
-        tools.push({ name: "web_fetch", type: "web_fetch_v1" });
+      if (web?.enabled) {
+        if (web.consent) tools.push({ name: "web_search", type: web.consent });
+        if (web.fetch) tools.push({ name: "web_fetch", type: "web_fetch_v1" });
       }
       if (featureEnabled("databases")) {
         selectedItems(state.context.databases, chat.settings.enabledDatabases).forEach(db => {
@@ -7723,9 +7829,22 @@
     }
 
     function applyConnectionSettings(values) {
+      const connectionChanged = state.privateGptBaseUrl !== (values.baseUrl || DEFAULT_BASE_URL)
+        || state.privateGptUsername !== (values.username || "")
+        || state.privateGptPassword !== (values.password || "");
       state.privateGptBaseUrl = values.baseUrl || DEFAULT_BASE_URL;
       state.privateGptUsername = values.username || "";
       state.privateGptPassword = values.password || "";
+      if (connectionChanged) {
+        for (const chat of state.chats) {
+          chat.settings.enabledWeb = false;
+          chat.settings.webConsent = null;
+          chat.settings.webFetchConsent = false;
+        }
+        runtime.webCapabilities = null;
+        runtime.webCapabilitiesRequest = null;
+      }
+      if (connectionChanged || runtime.webCapabilities?.error) loadWebCapabilities();
       if (typeof values.systemPrompt === "string") state.systemPrompt = values.systemPrompt;
       if (typeof values.useCitations === "boolean") state.useCitations = values.useCitations;
       if (typeof values.useDefaultPrompt === "boolean") state.useDefaultPrompt = values.useDefaultPrompt;
@@ -8004,6 +8123,7 @@
         if (!isOpen) {
           menu.classList.remove("closing");
           positionComposerPopover(menu, event.currentTarget, 360);
+          if (runtime.webCapabilities?.error) loadWebCapabilities();
         }
         if (isOpen) closeToolsMenu();
         else menu.classList.add("open");
@@ -8078,10 +8198,13 @@
           runtime.debugEvents = [];
           runtime.citations = new Map();
           runtime.selectedDebugId = null;
+          runtime.webCapabilities = null;
+          runtime.webCapabilitiesRequest = null;
           runtime.onboardingCheckRunning = false;
           runtime.sendingChatIds.clear();
           closeModal();
           render();
+          loadWebCapabilities();
           toast("Local workbench data cleared.", "ok");
         }
       );
@@ -8206,6 +8329,7 @@
     restoreFromHash();
     if (!state.chats.length) createChat();
     else render();
+    loadWebCapabilities();
     refreshSkills({ showToast: false });
     loadGitHubStars();
   </script>

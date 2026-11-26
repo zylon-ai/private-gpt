@@ -332,6 +332,8 @@ type ChatSession = {
     enabledDocuments: boolean;
     enabledDatabases: string[];
     enabledWeb: boolean;
+    webConsent?: string | null; // Approved search tool type, including Parallel selection mode.
+    webFetchConsent: boolean;
     enabledMcpServers: string[];
     enabledSkills: string[];
     enabledCustomTools: string[];
@@ -612,10 +614,11 @@ Do not collect web provider names, API keys, or extra web configuration in Workb
 
 The current OpenAPI exposes:
 
+- `GET /v1/tools/web-capabilities`
 - `POST /v1/tools/web-search`
 - `POST /v1/tools/web-fetch`
 
-The web search provider and any required credentials belong in PrivateGPT backend config. In Workbench, explain in Context > Web that the backend sends search queries to the configured provider and let the chat Tools menu decide whether `web_search` and `web_extract` are included in a chat request. The direct diagnostic endpoint may still be named `/v1/tools/web-fetch`; for `/v1/messages`, use the chat tool spec `{ "name": "web_extract", "type": "web_extract_v1" }`.
+The web search provider and any required credentials belong in the backend configuration. Context > Web shows which tools the backend makes available. The chat Tools menu identifies the provider and explains that search queries can include chat context. Web starts off in new chats. Turning it on adds only the available tools to chat requests. Workbench sends the approved search tool type and uses `web_fetch_v1` for URL fetch. Older saved Web-on chats can carry forward an explicitly configured provider. Automatically selected Parallel requires a fresh Web toggle even if the chat previously used explicitly configured Parallel. Turn Web on again when the provider, Parallel selection mode, or backend connection changes, or when the backend adds a web tool that was unavailable when Web was enabled.
 
 ### MCP
 

@@ -29,8 +29,17 @@ Built-in server tools only require `name` and `type`. Do not provide `inputSchem
 | `semantic_search_v1` | Search ingested documents | Available in `private-gpt[core]` and installs with ingestion support |
 | `tabular_analysis_v1` | Analyze ingested tabular data | Requires `tool-tabular` or `tools` |
 | `database_query_v1` | Query a SQL database | Requires database extras |
-| `web_search_v1` | Search the web | Requires `tool-web-scraping` or `tools` |
+| `parallel_web_search_v1` | Search with Parallel | Requires `tool-mcp`, included in `tools` and `core` |
+| `web_search_v1` | Search with an explicitly configured provider | Dependencies vary by provider |
 | `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
+
+Use `parallel_web_search_v1` in Messages to use the default Parallel provider.
+The generic `web_search_v1` only runs when the operator explicitly selected a
+provider in backend settings. Workbench reads `GET /v1/tools/web-capabilities`
+and sends a tool type tied to the disclosed provider. For Parallel it uses
+`automatic_parallel_web_search_v1` or `explicit_parallel_web_search_v1`, so the
+API or queue worker checks both the provider and how it was selected before
+sending a query.
 
 Minimal example:
 
@@ -38,7 +47,7 @@ Minimal example:
 {
   "tools": [
     {"name": "search_docs", "type": "semantic_search_v1"},
-    {"name": "search_web", "type": "web_search_v1"},
+    {"name": "search_web", "type": "parallel_web_search_v1"},
     {"name": "fetch_url", "type": "web_fetch_v1"}
   ]
 }
@@ -138,9 +147,10 @@ mssql+pyodbc://user:pass@localhost:1433/mydb?driver=ODBC+Driver+18+for+SQL+Serve
 db2://user:pass@localhost:50000/sample
 ```
 
-#### Example: `web_search_v1`
+#### Example: `parallel_web_search_v1`
 
-Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`. No `context` is required.
+Default Parallel search requires `private-gpt[tool-mcp]`, included in
+`private-gpt[tools]` and `private-gpt[core]`. No `context` is required.
 
 ```json
 {
@@ -151,7 +161,7 @@ Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt
   "tools": [
     {
       "name": "search_web",
-      "type": "web_search_v1"
+      "type": "parallel_web_search_v1"
     }
   ]
 }
@@ -391,9 +401,10 @@ curl -X POST http://localhost:8080/v1/tools/semantic-search \
 
 ### Web search
 
-Search the web and get aggregated results:
-
-Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`.
+Search the web and get aggregated results. The default Parallel provider returns
+excerpts and requires `private-gpt[tool-mcp]`, included in `private-gpt[tools]`
+and `private-gpt[core]`. See [Web Tools](/tools/web-tools) to change the provider
+or use a processor that fetches URLs.
 
 ```bash
 curl -X POST http://localhost:8080/v1/tools/web-search \

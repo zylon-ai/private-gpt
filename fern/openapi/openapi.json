@@ -2675,6 +2675,31 @@
         ]
       }
     },
+    "/v1/tools/web-capabilities": {
+      "get": {
+        "tags": [
+          "Tools"
+        ],
+        "summary": "Web Capabilities",
+        "description": "Report which built-in web tools can run without contacting a provider.",
+        "operationId": "web_capabilities_v1_tools_web_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebCapabilities"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/v1/tools/semantic-search": {
       "post": {
         "tags": [
@@ -3104,7 +3129,7 @@
                 },
                 "examples": {
                   "successful_search": {
-                    "summary": "Web search results with sources and text content",
+                    "summary": "Web search with a processor that fetches URLs",
                     "value": {
                       "content": [
                         {
@@ -13046,6 +13071,51 @@
         ],
         "title": "ValidationError",
         "description": "ValidationError schema."
+      },
+      "WebCapabilities": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "The effective search provider."
+          },
+          "automatic_provider": {
+            "type": "boolean",
+            "title": "Automatic Provider",
+            "description": "Whether the search provider was selected by default."
+          },
+          "search_available": {
+            "type": "boolean",
+            "title": "Search Available",
+            "description": "Whether search is enabled and passes local configuration checks."
+          },
+          "fetch_available": {
+            "type": "boolean",
+            "title": "Fetch Available",
+            "description": "Whether URL fetching is enabled online."
+          },
+          "search_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Unavailable Reason",
+            "description": "Why search is unavailable, if applicable."
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "automatic_provider",
+          "search_available",
+          "fetch_available"
+        ],
+        "title": "WebCapabilities",
+        "description": "Configured web tools and their local availability."
       },
       "WebFetchBody": {
         "properties": {

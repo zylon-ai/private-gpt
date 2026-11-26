@@ -26,6 +26,11 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.tool_names import (
     SEMANTIC_SEARCH_TOOL_NAME,
 )
+from private_gpt.components.web.web_search.models import WebSearchResult
+from private_gpt.components.web.web_search.providers.brave import BraveSearchProvider
+from private_gpt.components.web.web_search.providers.parallel import (
+    ParallelSearchProvider,
+)
 from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     FatalError,
@@ -111,6 +116,98 @@ async def mock_llm(
     llm_component = injector.get(LLMComponent)
     llm_component.get_llm = Mock(return_value=mock_llm)
     injector.bind_mock(LLMComponent, llm_component)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("async_test_client", "tool_type", "expected_error"),
+    [
+        pytest.param(
+            {
+                "web_search": {
+                    "provider": provider,
+                    "enabled": True,
+                    "processor": "simple_text",
+                },
+                "brave": {"api_key": "fixture-key"},
+            },
+            tool_type,
+            expected_error,
+            id=f"{provider}-{tool_type}",
+        )
+        for provider, tool_type, expected_error in [
+            ("brave", "web_search_v1", None),
+            ("brave", "brave_web_search_v1", None),
+            ("brave", "parallel_web_search_v1", "differs from the expected provider"),
+            ("brave", "web_search_v0", "Review the current provider"),
+            ("auto", "web_search_v1", "Select the search provider"),
+            ("auto", "parallel_web_search_v1", None),
+            ("parallel", "explicit_parallel_web_search_v1", None),
+            ("auto", "explicit_parallel_web_search_v1", "provider selection changed"),
+            (
+                "parallel",
+                "automatic_parallel_web_search_v1",
+                "provider selection changed",
+            ),
+            ("auto", "automatic_parallel_web_search_v1", None),
+            ("auto", None, None),
+        ]
+    ],
+    indirect=["async_test_client"],
+)
+async def test_messages_honors_the_search_provider_in_the_tool_type(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    monkeypatch: pytest.MonkeyPatch,
+    tool_type: str | None,
+    expected_error: str | None,
+) -> None:
+    query = "Cassini spacecraft"
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="search-1",
+                    tool_name="web_search",
+                    tool_kwargs={"query": query},
+                )
+            ],
+            ["Finished."],
+        ]
+        if tool_type
+        else [["Finished."]],
+    )
+    search = AsyncMock(
+        return_value=[
+            WebSearchResult(
+                url="https://example.org/cassini",
+                title="Cassini",
+                description="Cassini excerpt",
+            )
+        ]
+    )
+    monkeypatch.setattr(BraveSearchProvider, "make_query", search)
+    monkeypatch.setattr(ParallelSearchProvider, "make_query", search)
+
+    response = await async_test_client.post(
+        "/v1/messages",
+        json={
+            "messages": [{"role": "user", "content": query}],
+            "tools": [{"name": "web_search", "type": tool_type}] if tool_type else [],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    if tool_type is None:
+        search.assert_not_awaited()
+    elif expected_error is None:
+        search.assert_awaited_once()
+        assert search.await_args.args[0] == query
+        assert "Cassini excerpt" in response.text
+    else:
+        search.assert_not_awaited()
+        assert expected_error in response.text
 
 
 @pytest.mark.anyio

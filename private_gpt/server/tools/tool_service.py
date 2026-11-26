@@ -84,7 +84,11 @@ class ToolService:
         return self._web_fetch_tool_builder_factory.create().build_tool()
 
     async def build_web_search_tool(self) -> ToolSpec:
-        return await self._web_search_tool_builder_factory.create().build_tool()
+        builder = self._web_search_tool_builder_factory.create()
+        search = self.settings.web_search
+        if search.automatic_provider:
+            return await builder.build_tool(type=f"{search.provider}_web_search_v1")
+        return await builder.build_tool()
 
     async def semantic_search_tool(
         self,
@@ -199,10 +203,7 @@ class ToolService:
         query: str,
     ) -> ToolResponse:
         try:
-            builder = self._web_search_tool_builder_factory.create()
-
-            tool = await builder.build_tool()
-
+            tool = await self.build_web_search_tool()
             response = await tool.async_fn(query)
             return ToolResponse(
                 content=response,
