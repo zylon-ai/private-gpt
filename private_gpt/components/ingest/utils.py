@@ -484,9 +484,14 @@ def convert_file(
         converted_path = conversion_func(
             file_info, target_extension, raise_in_exception
         )
+        # The extension comes from the converted file, never from the uploaded
+        # name: "REPORT.DOC" carries its extension in another case and
+        # "notes.doc.backup.doc" repeats it in the stem, so replacing the
+        # substring leaves the converted .docx described as a .doc (and routed
+        # to the text reader). A failed conversion keeps the original suffix.
         new_file_name = (
-            file_info.file_name.replace(file_info.extension, converted_path.suffix)
-            if file_info.file_name and file_info.extension
+            str(Path(file_info.file_name).with_suffix(converted_path.suffix))
+            if file_info.file_name and file_info.extension and converted_path.suffix
             else None
         )
         return get_file_info(converted_path, file_name=new_file_name)
