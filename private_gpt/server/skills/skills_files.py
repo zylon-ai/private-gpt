@@ -190,15 +190,13 @@ def _flatten_wrapper_directory(
     if not entries:
         return entries
 
-    # Find SKILL.md (case-insensitive)
+    # Zips made on Windows can store backslash separators.
+    entries = [(path.replace("\\", "/"), content) for path, content in entries]
+
+    # Find SKILL.md (case-insensitive, as _normalize_path matches it)
     skill_md_entry = None
     for path, content in entries:
-        if (
-            path.endswith("/SKILL.md")
-            or path.endswith("/skill.md")
-            or path == "SKILL.md"
-            or path == "skill.md"
-        ):
+        if path.rsplit("/", 1)[-1].lower() == "skill.md":
             skill_md_entry = (path, content)
             break
 

@@ -209,6 +209,27 @@ class TestFlattenWrapperDirectory:
         # Should normalize to SKILL.md
         assert "SKILL.md" in paths or "skill.md" in paths
 
+    def test_mixed_case_skill_md_detection(self):
+        """Skill.md is recognized like _normalize_path does."""
+        entries = [
+            ("repo/Skill.md", b"---\nname: test\ndescription: Test\n---"),
+            ("repo/scripts/run.py", b"print('hi')"),
+        ]
+        result = _flatten_wrapper_directory(entries)
+        paths = [p for p, _ in result]
+        assert paths == ["Skill.md", "scripts/run.py"]
+
+    def test_backslash_separators_flattened(self):
+        """Zips made on Windows can store paths with backslashes."""
+        entries = [
+            ("repo\\my-skill\\SKILL.md", b"---\nname: test\ndescription: Test\n---"),
+            ("repo\\my-skill\\scripts\\run.py", b"print('hi')"),
+            ("repo\\README.md", b"# Repo"),
+        ]
+        result = _flatten_wrapper_directory(entries)
+        paths = [p for p, _ in result]
+        assert paths == ["SKILL.md", "scripts/run.py"]
+
     def test_mixed_content_at_multiple_levels(self):
         """Complex structure with files at multiple levels."""
         entries = [
@@ -327,6 +348,16 @@ class TestStoredFilesFromUploads:
         assert len(result) == 1
         assert result[0].path == "SKILL.md"
         assert result[0].content == content
+
+    async def test_zip_with_wrapper_and_mixed_case_skill_md(self):
+        payload = _zip_with_files(
+            {
+                "my-skill/Skill.md": b"---\nname: my-skill\ndescription: test\n---",
+                "my-skill/scripts/run.py": b"print('hi')",
+            }
+        )
+        result = await stored_files_from_uploads([_make_upload(payload)])
+        assert sorted(f.path for f in result) == ["SKILL.md", "scripts/run.py"]
 
     async def test_single_binary_file_not_promoted_to_skill_md(self):
         binary = b"\x50\x4b\x03\x04" + b"\x00" * 20  # zip magic bytes
