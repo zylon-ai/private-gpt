@@ -287,6 +287,17 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
                 total_tokens += r.tokens
                 if len(fallback) >= self._params.num_references:
                     break
+            # Not enough pages could be scraped and validated in time (slow or
+            # blocked sites): fill with the provider's title/snippet instead of
+            # returning nothing, so the caller still gets the search results.
+            chosen = {r.url for r in fallback}
+            for r in sorted(scraped_results, key=lambda r: r.idx or 0):
+                if len(fallback) >= self._params.num_references:
+                    break
+                if r.url in chosen or not r.description:
+                    continue
+                fallback.append(r.model_copy(update={"content": None, "tokens": 0}))
+                chosen.add(r.url)
             return fallback
 
     def _init_params(self) -> None:
