@@ -1,8 +1,11 @@
 import io
 import os
+from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
+from private_gpt.settings import settings_loader
 from private_gpt.settings.settings_loader import discover_models_from_environment
 from private_gpt.settings.yaml import load_yaml_with_envvars
 
@@ -120,3 +123,21 @@ def test_discover_exporters_from_environment() -> None:
     # Valid settings as they come from the environment.
     for exporter in exporters:
         ObservabilityExporterSettings.model_validate(exporter)
+
+
+def test_profile_file_is_read_as_utf8_whatever_the_locale(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    locale_encoding: Callable[[str], None],
+) -> None:
+    (tmp_path / "settings-local.yaml").write_text(
+        "chat:\n  assistant_description: 日本語で回答してください。\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings_loader, "_settings_folders", [str(tmp_path)])
+    # The code page of Japanese Windows.
+    locale_encoding("cp932")
+
+    loaded = settings_loader.load_settings_from_profile("local")
+
+    assert loaded == {"chat": {"assistant_description": "日本語で回答してください。"}}
