@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: Morse
+            slug: providers/morse
+            path: ./docs/pages/providers/morse.mdx
       - section: Integrations
         skip-slug: true
         contents:
