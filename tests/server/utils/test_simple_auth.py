@@ -56,3 +56,13 @@ def test_default_auth_working_when_enabled_200(test_client: TestClient) -> None:
         headers={"Authorization": settings().server.auth.secret},
     )
     assert response_success.status_code == 200
+
+
+def test_non_ascii_authorization_header_is_rejected_401(
+    test_client: TestClient,
+) -> None:
+    response = test_client.get(
+        "/v1/artifacts/list?collection=default",
+        headers={"Authorization": "Bearer café".encode()},
+    )
+    assert response.status_code == 401
