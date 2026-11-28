@@ -107,6 +107,9 @@ navigation:
           - page: HopBase
             slug: providers/hopbase
             path: ./docs/pages/providers/hopbase.mdx
+          - page: LLMTR
+            slug: providers/llmtr
+            path: ./docs/pages/providers/llmtr.mdx
       - section: Integrations
         skip-slug: true
         contents:
