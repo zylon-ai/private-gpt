@@ -21,6 +21,7 @@ class OpenAIResponsesFactory(OpenAIResponsesLLMLoader, LLMFactory):
         self, model_config: LLMModelConfig, tokenizer: TokenizerBase | None = None
     ) -> tuple[LLM, str | None]:
         PatchedOpenAIResponsesLLM = self._load_patched_openai_responses()
+        sampling_params = model_config.sampling_params
 
         llm = cast(
             LLM,
@@ -28,6 +29,11 @@ class OpenAIResponsesFactory(OpenAIResponsesLLMLoader, LLMFactory):
                 model=model_config.name,
                 api_key=self.openai_settings.api_key,
                 api_base=self.openai_settings.api_base or "https://api.openai.com/v1",
+                temperature=sampling_params.temperature,
+                # Only cap the output when the user configured a limit.
+                max_output_tokens=sampling_params.max_new_tokens
+                if "max_new_tokens" in sampling_params.model_fields_set
+                else None,
             ),
         )
 
